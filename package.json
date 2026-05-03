@@ -26,8 +26,21 @@
       {
         "command": "vibelearn.clearApiKey",
         "title": "VibeLearn: Clear API Key"
+      },
+      {
+        "command": "vibelearn.reviewSelection",
+        "title": "VibeLearn: Review Selected Code"
       }
     ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "vibelearn.reviewSelection",
+          "when": "editorHasSelection",
+          "group": "1_modification"
+        }
+      ]
+    },
     "viewsContainers": {
       "activitybar": [
         {

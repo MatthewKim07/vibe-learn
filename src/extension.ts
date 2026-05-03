@@ -28,6 +28,90 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('vibelearn.clearApiKey', () => clearApiKey(context))
   );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('vibelearn.reviewSelection', () =>
+      reviewSelection(provider)
+    )
+  );
+}
+
+async function reviewSelection(provider: ChatViewProvider) {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) {
+    vscode.window.showInformationMessage(
+      'VibeLearn: open a file and select some code to review.'
+    );
+    return;
+  }
+
+  const selection = editor.selection;
+  const selected = editor.document.getText(selection);
+  if (!selected.trim()) {
+    vscode.window.showInformationMessage(
+      'VibeLearn: no code selected. Highlight the code you want reviewed first.'
+    );
+    return;
+  }
+
+  const language = editor.document.languageId || 'text';
+  const prompt = buildReviewPrompt(selected, language);
+  const display = buildReviewDisplay(selected, language);
+  await provider.submitExternal(prompt, display);
+}
+
+const LANGUAGE_LABELS: Record<string, string> = {
+  typescript: 'TypeScript',
+  typescriptreact: 'TSX',
+  javascript: 'JavaScript',
+  javascriptreact: 'JSX',
+  python: 'Python',
+  java: 'Java',
+  csharp: 'C#',
+  cpp: 'C++',
+  c: 'C',
+  go: 'Go',
+  rust: 'Rust',
+  ruby: 'Ruby',
+  php: 'PHP',
+  swift: 'Swift',
+  kotlin: 'Kotlin',
+  html: 'HTML',
+  css: 'CSS',
+  scss: 'SCSS',
+  json: 'JSON',
+  yaml: 'YAML',
+  markdown: 'Markdown',
+  shellscript: 'Shell',
+  sql: 'SQL'
+};
+
+function prettyLanguage(id: string): string {
+  return LANGUAGE_LABELS[id] ?? id;
+}
+
+function buildReviewDisplay(code: string, language: string): string {
+  const lines = code.split('\n').length;
+  const label = prettyLanguage(language);
+  return `Review ${lines} line${lines === 1 ? '' : 's'} of ${label}:\n\n\`\`\`${language}\n${code}\n\`\`\``;
+}
+
+function buildReviewPrompt(code: string, language: string): string {
+  const label = prettyLanguage(language);
+  return [
+    `Please review this ${label} code in teaching mode.`,
+    'Structure your reply with these four sections, in order:',
+    '1. **What this code is doing** — short plain-language summary.',
+    '2. **What is good** — name what works and why.',
+    '3. **What could be improved** — focus on correctness and clarity, then style. Name concepts.',
+    '4. **One hint to try next** — a single concrete next step the user can attempt themselves. Do not write the fix for them.',
+    '',
+    'Keep it concise. Respect my current help level.',
+    '',
+    `\`\`\`${language}`,
+    code,
+    '```'
+  ].join('\n');
 }
 
 async function setApiKey(context: vscode.ExtensionContext) {

@@ -9,6 +9,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
   private history: ChatMessage[] = [];
   private webviewView?: vscode.WebviewView;
+  private pendingExternal?: { payload: string; displayText: string };
 
   constructor(private readonly context: vscode.ExtensionContext) {}
 
@@ -28,8 +29,23 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.onDidReceiveMessage(async (msg) => {
       if (msg?.type === 'userMessage' && typeof msg.text === 'string') {
         await this.handleUserMessage(msg.text);
+      } else if (msg?.type === 'webviewReady' && this.pendingExternal) {
+        const pending = this.pendingExternal;
+        this.pendingExternal = undefined;
+        await this.submitExternal(pending.payload, pending.displayText);
       }
     });
+  }
+
+  public async submitExternal(payload: string, displayText?: string) {
+    const shown = displayText ?? payload;
+    await vscode.commands.executeCommand('vibelearn.chatView.focus');
+    if (!this.webviewView) {
+      this.pendingExternal = { payload, displayText: shown };
+      return;
+    }
+    this.webviewView.webview.postMessage({ type: 'userBubble', text: shown });
+    await this.handleUserMessage(payload);
   }
 
   private async handleUserMessage(text: string) {
@@ -227,6 +243,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         append(msg.text, 'assistant');
       } else if (msg.type === 'errorMessage') {
         append(msg.text, 'error');
+      } else if (msg.type === 'userBubble') {
+        append(msg.text, 'user');
       } else if (msg.type === 'busy') {
         showTyping(!!msg.busy);
         sendBtn.disabled = !!msg.busy;
@@ -234,6 +252,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         if (!msg.busy) input.focus();
       }
     });
+
+    vscode.postMessage({ type: 'webviewReady' });
   </script>
 </body>
 </html>`;

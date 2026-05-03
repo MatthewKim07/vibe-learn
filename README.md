@@ -16,6 +16,7 @@ Early but live. Sidebar chat now talks to **OpenAI**. Anthropic / Gemini / Ollam
   - `VibeLearn: Open Chat` — focus the sidebar.
   - `VibeLearn: Set API Key` — store an API key per provider in VS Code SecretStorage.
   - `VibeLearn: Clear API Key` — remove a stored key.
+  - `VibeLearn: Review Selected Code` — select code in the editor, then run from Command Palette or right-click menu. Review lands in the sidebar chat with: what it does, what's good, what to improve, one hint to try next.
 - Settings: choose provider, model, and how much the assistant teaches vs. answers.
 
 ## Getting Started

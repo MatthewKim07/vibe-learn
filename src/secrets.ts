@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
+import { Provider } from './ai/types';
 
-export type Provider = 'openai' | 'anthropic' | 'gemini' | 'ollama';
+export type { Provider };
 
 const KEY_PREFIX = 'vibelearn.apiKey.';
 

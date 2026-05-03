@@ -19,7 +19,25 @@
         "command": "vibelearn.openChat",
         "title": "VibeLearn: Open Chat"
       }
-    ]
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "vibelearn",
+          "title": "VibeLearn",
+          "icon": "media/vibelearn.svg"
+        }
+      ]
+    },
+    "views": {
+      "vibelearn": [
+        {
+          "type": "webview",
+          "id": "vibelearn.chatView",
+          "name": "Chat"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

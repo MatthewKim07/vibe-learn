@@ -18,6 +18,14 @@
       {
         "command": "vibelearn.openChat",
         "title": "VibeLearn: Open Chat"
+      },
+      {
+        "command": "vibelearn.setApiKey",
+        "title": "VibeLearn: Set API Key"
+      },
+      {
+        "command": "vibelearn.clearApiKey",
+        "title": "VibeLearn: Clear API Key"
       }
     ],
     "viewsContainers": {
@@ -37,6 +45,40 @@
           "name": "Chat"
         }
       ]
+    },
+    "configuration": {
+      "title": "VibeLearn",
+      "properties": {
+        "vibelearn.provider": {
+          "type": "string",
+          "default": "openai",
+          "enum": ["openai", "anthropic", "gemini", "ollama"],
+          "enumDescriptions": [
+            "OpenAI (GPT models)",
+            "Anthropic (Claude models)",
+            "Google Gemini",
+            "Ollama (local models, no API key)"
+          ],
+          "description": "AI provider used by VibeLearn."
+        },
+        "vibelearn.model": {
+          "type": "string",
+          "default": "gpt-4o-mini",
+          "description": "Model name for the selected provider (e.g. gpt-4o-mini, claude-sonnet-4-6, gemini-1.5-pro, llama3)."
+        },
+        "vibelearn.helpLevel": {
+          "type": "string",
+          "default": "guided",
+          "enum": ["strict", "guided", "assist", "full"],
+          "enumDescriptions": [
+            "Strict: only questions and concept hints, never code.",
+            "Guided: hints and small steps, partial code only when asked.",
+            "Assist: hints first, but willing to show full code on request.",
+            "Full: behaves like a normal assistant, gives complete answers."
+          ],
+          "description": "How much the assistant teaches vs. answers directly."
+        }
+      }
     }
   },
   "scripts": {

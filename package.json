@@ -1,0 +1,34 @@
+{
+  "name": "vibelearn",
+  "displayName": "VibeLearn",
+  "description": "Learning-first AI coding assistant. Hints and guiding questions instead of full solutions.",
+  "version": "0.0.1",
+  "publisher": "vibelearn",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Education",
+    "Other"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "commands": [
+      {
+        "command": "vibelearn.openChat",
+        "title": "VibeLearn: Open Chat"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0"
+  }
+}

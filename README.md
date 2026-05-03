@@ -6,11 +6,12 @@ VibeLearn helps you code your own ideas. Instead of generating full solutions, i
 
 ## Status
 
-Early scaffold. Sidebar chat UI works with a placeholder reply. Settings + secure API key storage in place. **No live AI calls yet** — the LLM backend lands in the next milestone.
+Early but live. Sidebar chat now talks to **OpenAI**. Anthropic / Gemini / Ollama clients are scaffolded but not wired yet — switching to those providers will show a clear "not connected yet" message.
 
 ## Features
 
-- Sidebar chat panel (graduation-cap icon in the Activity Bar).
+- Sidebar chat panel (graduation-cap icon in the Activity Bar) — sends to OpenAI and shows the reply.
+- Teaching-rules system prompt driven by `vibelearn.helpLevel` (strict / guided / assist / full).
 - Commands:
   - `VibeLearn: Open Chat` — focus the sidebar.
   - `VibeLearn: Set API Key` — store an API key per provider in VS Code SecretStorage.
@@ -65,14 +66,40 @@ To remove a key: `Cmd+Shift+P` → **VibeLearn: Clear API Key** → pick provide
 
 You can store keys for multiple providers at once. Switching `vibelearn.provider` picks which one is used.
 
+## Using the Chat (OpenAI)
+
+1. Save your OpenAI key: `Cmd+Shift+P` → **VibeLearn: Set API Key** → pick `openai` → paste key.
+2. Confirm settings: `Cmd+,` → search **vibelearn**.
+   - `vibelearn.provider` = `openai`
+   - `vibelearn.model` = e.g. `gpt-4o-mini` (any OpenAI chat model ID).
+   - `vibelearn.helpLevel` = `guided` (or whichever).
+3. Open the sidebar (graduation-cap icon).
+4. Type a question → Enter. You should see a "thinking…" indicator, then the reply.
+
+The chat keeps history within the sidebar session — each message is sent with prior turns so the model has context. Reload the dev host (`Cmd+R`) to clear history.
+
+### Errors you might see
+
+| Message | Meaning | Fix |
+|---|---|---|
+| `No OpenAI API key found...` | No key stored for the selected provider. | Run **VibeLearn: Set API Key**. |
+| `OpenAI request failed (401): invalid or missing API key` | Key is wrong/expired. | Re-run Set API Key with a fresh key. |
+| `OpenAI request failed (429): ...` | Rate limit / quota. | Wait or check your OpenAI billing. |
+| `Provider "anthropic" is not connected yet.` | Selected a provider that isn't wired yet. | Switch `vibelearn.provider` back to `openai`. |
+
 ## Project Layout
 
 ```
 .
 ├── src/
 │   ├── extension.ts         # activate, command registration
-│   ├── chatViewProvider.ts  # sidebar webview UI
-│   └── secrets.ts           # SecretStorage helpers
+│   ├── chatViewProvider.ts  # sidebar webview UI + chat orchestration
+│   ├── secrets.ts           # SecretStorage helpers
+│   └── ai/
+│       ├── types.ts         # ChatMessage, LLMClient, LLMError
+│       ├── systemPrompt.ts  # builds prompt from helpLevel
+│       ├── openaiClient.ts  # OpenAI implementation
+│       └── index.ts         # provider factory
 ├── media/vibelearn.svg      # activity bar icon
 ├── docs/
 │   ├── project-overview.md

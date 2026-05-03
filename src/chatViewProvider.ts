@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { createClient } from './ai';
-import { buildSystemPrompt } from './ai/systemPrompt';
+import { buildMessages } from './ai/promptBuilder';
 import { ChatMessage, HelpLevel, LLMError, Provider } from './ai/types';
 import { getApiKey } from './secrets';
 
@@ -45,10 +45,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       const apiKey = await getApiKey(this.context.secrets, provider);
       const client = createClient({ provider, apiKey });
 
-      const messages: ChatMessage[] = [
-        { role: 'system', content: buildSystemPrompt(helpLevel) },
-        ...this.history
-      ];
+      const messages = buildMessages({ level: helpLevel, history: this.history });
 
       const reply = await client.complete({ model, messages });
       this.history.push({ role: 'assistant', content: reply });

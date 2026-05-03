@@ -25,6 +25,7 @@ Prerequisites: Node.js 18+, VS Code 1.85+.
 ```bash
 npm install
 npm run compile
+npm test          # optional: run prompt builder unit tests
 ```
 
 Then in VS Code:
@@ -96,10 +97,11 @@ The chat keeps history within the sidebar session — each message is sent with 
 │   ├── chatViewProvider.ts  # sidebar webview UI + chat orchestration
 │   ├── secrets.ts           # SecretStorage helpers
 │   └── ai/
-│       ├── types.ts         # ChatMessage, LLMClient, LLMError
-│       ├── systemPrompt.ts  # builds prompt from helpLevel
-│       ├── openaiClient.ts  # OpenAI implementation
-│       └── index.ts         # provider factory
+│       ├── types.ts                 # ChatMessage, LLMClient, LLMError
+│       ├── promptBuilder.ts         # teaching system prompt per helpLevel
+│       ├── promptBuilder.test.ts    # unit tests (node:test)
+│       ├── openaiClient.ts          # OpenAI implementation
+│       └── index.ts                 # provider factory
 ├── media/vibelearn.svg      # activity bar icon
 ├── docs/
 │   ├── project-overview.md

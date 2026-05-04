@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { createClient } from './ai';
 import { buildMessages } from './ai/promptBuilder';
-import { ChatMessage, HelpLevel, LLMError, Provider } from './ai/types';
+import { AIError, ChatMessage, HelpLevel, Provider } from './ai/types';
 import { getApiKey } from './secrets';
 
 export class ChatViewProvider implements vscode.WebviewViewProvider {
@@ -67,7 +67,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       this.history.push({ role: 'assistant', content: reply });
       this.postAssistant(reply);
     } catch (err) {
-      const message = err instanceof LLMError
+      const message = err instanceof AIError
         ? err.message
         : err instanceof Error
           ? err.message

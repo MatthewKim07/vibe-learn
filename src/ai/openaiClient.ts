@@ -1,4 +1,4 @@
-import { ChatMessage, LLMClient, LLMError, LLMRequest, Provider } from './types';
+import { ChatMessage, AIClient, AIError, AIRequest, Provider } from './types';
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 
@@ -7,16 +7,16 @@ interface OpenAIResponse {
   error?: { message?: string; type?: string };
 }
 
-export class OpenAIClient implements LLMClient {
+export class OpenAIClient implements AIClient {
   public readonly provider: Provider = 'openai';
 
   constructor(private readonly apiKey: string) {
     if (!apiKey) {
-      throw new LLMError('OpenAI client requires an API key.');
+      throw new AIError('OpenAI client requires an API key.');
     }
   }
 
-  async complete(req: LLMRequest): Promise<string> {
+  async complete(req: AIRequest): Promise<string> {
     const body = {
       model: req.model,
       messages: req.messages.map((m: ChatMessage) => ({
@@ -37,12 +37,12 @@ export class OpenAIClient implements LLMClient {
         signal: req.signal
       });
     } catch (err) {
-      throw new LLMError(toSafeMessage(err) || 'Network error contacting OpenAI.', err);
+      throw new AIError(toSafeMessage(err) || 'Network error contacting OpenAI.', err);
     }
 
     if (!res.ok) {
       const detail = await safeReadError(res);
-      throw new LLMError(
+      throw new AIError(
         `OpenAI request failed (${res.status}): ${detail}`,
         undefined,
         res.status
@@ -53,12 +53,12 @@ export class OpenAIClient implements LLMClient {
     try {
       data = (await res.json()) as OpenAIResponse;
     } catch (err) {
-      throw new LLMError('OpenAI returned non-JSON response.', err);
+      throw new AIError('OpenAI returned non-JSON response.', err);
     }
 
     const content = data.choices?.[0]?.message?.content;
     if (typeof content !== 'string' || content.length === 0) {
-      throw new LLMError('OpenAI response did not contain content.');
+      throw new AIError('OpenAI response did not contain content.');
     }
     return content;
   }

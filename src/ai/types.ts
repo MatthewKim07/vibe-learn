@@ -5,28 +5,29 @@ export interface ChatMessage {
   content: string;
 }
 
-export type Provider = 'openai' | 'anthropic' | 'gemini' | 'ollama';
+export type Provider = 'openai' | 'anthropic' | 'gemini' | 'openrouter' | 'ollama';
 
 export type HelpLevel = 'strict' | 'guided' | 'assist' | 'full';
 
-export interface LLMRequest {
+export interface AIRequest {
   model: string;
   messages: ChatMessage[];
   signal?: AbortSignal;
 }
 
-export interface LLMClient {
+export interface AIClient {
   readonly provider: Provider;
-  complete(req: LLMRequest): Promise<string>;
+  complete(req: AIRequest): Promise<string>;
 }
 
-export class LLMError extends Error {
+export class AIError extends Error {
   constructor(
     message: string,
     public readonly cause?: unknown,
     public readonly status?: number
   ) {
     super(message);
-    this.name = 'LLMError';
+    this.name = 'AIError';
   }
 }
+

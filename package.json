@@ -69,12 +69,13 @@
         "vibelearn.provider": {
           "type": "string",
           "default": "openai",
-          "enum": ["openai", "anthropic", "gemini", "ollama"],
+          "enum": ["openai", "anthropic", "gemini", "openrouter", "ollama"],
           "enumDescriptions": [
-            "OpenAI (GPT models)",
-            "Anthropic (Claude models)",
-            "Google Gemini",
-            "Ollama (local models, no API key)"
+            "OpenAI (GPT models) — implemented",
+            "Anthropic (Claude models) — placeholder, not implemented yet",
+            "Google Gemini — placeholder, not implemented yet",
+            "OpenRouter (OpenAI-compatible router) — placeholder, not implemented yet",
+            "Ollama (local models, no API key) — placeholder, not implemented yet"
           ],
           "description": "AI provider used by VibeLearn."
         },
@@ -102,7 +103,7 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "test": "tsc -p ./ && node --test out/ai/promptBuilder.test.js out/promptRewrite.test.js"
+    "test": "tsc -p ./ && node --test out/ai/promptBuilder.test.js out/ai/factory.test.js out/promptRewrite.test.js"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

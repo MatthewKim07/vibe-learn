@@ -38,6 +38,7 @@ export async function pickProvider(
     { label: 'openai', description: 'OpenAI (GPT)' },
     { label: 'anthropic', description: 'Anthropic (Claude)' },
     { label: 'gemini', description: 'Google Gemini' },
+    { label: 'openrouter', description: 'OpenRouter (multi-model router)' },
     { label: 'ollama', description: 'Ollama (local, no key)' }
   ];
   const picked = await vscode.window.showQuickPick(items, {

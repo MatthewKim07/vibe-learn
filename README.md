@@ -43,7 +43,7 @@ Open settings: `Cmd+,` (Mac) / `Ctrl+,` (Win/Linux), search **VibeLearn**.
 
 | Setting | Values | Default | What it does |
 |---|---|---|---|
-| `vibelearn.provider` | `openai`, `anthropic`, `gemini`, `ollama` | `openai` | Which AI provider to call. |
+| `vibelearn.provider` | `openai`, `anthropic`, `gemini`, `openrouter`, `ollama` | `openai` | Which AI provider to call. Only `openai` is fully wired today; the others return a "not implemented yet" message. |
 | `vibelearn.model` | any string | `gpt-4o-mini` | Model name for that provider (e.g. `gpt-4o-mini`, `claude-sonnet-4-6`, `gemini-1.5-pro`, `llama3`). |
 | `vibelearn.helpLevel` | `strict`, `guided`, `assist`, `full` | `guided` | How much the assistant teaches vs. answers directly. |
 
@@ -98,11 +98,19 @@ The chat keeps history within the sidebar session — each message is sent with 
 │   ├── extension.ts         # activate, command registration
 │   ├── chatViewProvider.ts  # sidebar webview UI + chat orchestration
 │   ├── secrets.ts           # SecretStorage helpers
+│   ├── promptRewrite.ts             # local prompt-rewrite templates
+│   ├── promptRewrite.test.ts        # unit tests
 │   └── ai/
-│       ├── types.ts                 # ChatMessage, LLMClient, LLMError
+│       ├── types.ts                 # AIClient, AIRequest, AIError, Provider, ChatMessage
 │       ├── promptBuilder.ts         # teaching system prompt per helpLevel
 │       ├── promptBuilder.test.ts    # unit tests (node:test)
-│       ├── openaiClient.ts          # OpenAI implementation
+│       ├── notImplementedClient.ts  # base for placeholder providers
+│       ├── openaiClient.ts          # OpenAI (implemented)
+│       ├── anthropicClient.ts       # placeholder
+│       ├── geminiClient.ts          # placeholder
+│       ├── openrouterClient.ts     # placeholder
+│       ├── ollamaClient.ts          # placeholder
+│       ├── factory.test.ts          # factory unit tests
 │       └── index.ts                 # provider factory
 ├── media/vibelearn.svg      # activity bar icon
 ├── docs/

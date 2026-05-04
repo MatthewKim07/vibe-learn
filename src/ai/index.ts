@@ -1,30 +1,41 @@
+import { AnthropicClient } from './anthropicClient';
+import { GeminiClient } from './geminiClient';
+import { OllamaClient } from './ollamaClient';
 import { OpenAIClient } from './openaiClient';
-import { LLMClient, LLMError, Provider } from './types';
+import { OpenRouterClient } from './openrouterClient';
+import { AIClient, AIError, Provider } from './types';
 
 export interface CreateClientArgs {
   provider: Provider;
   apiKey?: string;
 }
 
-export function createClient(args: CreateClientArgs): LLMClient {
+export function createClient(args: CreateClientArgs): AIClient {
   switch (args.provider) {
     case 'openai':
       if (!args.apiKey) {
-        throw new LLMError(
+        throw new AIError(
           'No OpenAI API key found. Run "VibeLearn: Set API Key" from the Command Palette.'
         );
       }
       return new OpenAIClient(args.apiKey);
 
     case 'anthropic':
-    case 'gemini':
-    case 'ollama':
-      throw new LLMError(
-        `Provider "${args.provider}" is not connected yet. Set vibelearn.provider to "openai" for now.`
-      );
+      return new AnthropicClient(args.apiKey);
 
-    default:
-      throw new LLMError(`Unknown provider: ${args.provider as string}`);
+    case 'gemini':
+      return new GeminiClient(args.apiKey);
+
+    case 'openrouter':
+      return new OpenRouterClient(args.apiKey);
+
+    case 'ollama':
+      return new OllamaClient();
+
+    default: {
+      const exhaustive: never = args.provider;
+      throw new AIError(`Unknown provider: ${exhaustive as string}`);
+    }
   }
 }
 

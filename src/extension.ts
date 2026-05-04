@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { ChatViewProvider } from './chatViewProvider';
+import { rewritePrompt } from './promptRewrite';
 import {
   Provider,
   deleteApiKey,
@@ -34,6 +35,51 @@ export function activate(context: vscode.ExtensionContext) {
       reviewSelection(provider)
     )
   );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('vibelearn.rewritePrompt', rewritePromptCommand)
+  );
+}
+
+async function rewritePromptCommand() {
+  const input = await vscode.window.showInputBox({
+    prompt: 'Enter the prompt you would normally send to an AI',
+    placeHolder: 'e.g. Build me a React login page',
+    ignoreFocusOut: true,
+    validateInput: (v) => (v.trim().length === 0 ? 'Prompt cannot be empty.' : null)
+  });
+  if (!input) return;
+
+  const rewritten = rewritePrompt(input);
+
+  const body = [
+    '# VibeLearn — Rewritten Prompt',
+    '',
+    '## Original',
+    '',
+    input,
+    '',
+    '## Learning-focused rewrite',
+    '',
+    rewritten,
+    '',
+    '---',
+    '',
+    'Copy the rewritten prompt and paste it into your AI tool of choice.'
+  ].join('\n');
+
+  const doc = await vscode.workspace.openTextDocument({
+    language: 'markdown',
+    content: body
+  });
+  await vscode.window.showTextDocument(doc, { preview: false });
+
+  try {
+    await vscode.env.clipboard.writeText(rewritten);
+    vscode.window.showInformationMessage('VibeLearn: rewritten prompt copied to clipboard.');
+  } catch {
+    vscode.window.showInformationMessage('VibeLearn: rewritten prompt ready in the new editor tab.');
+  }
 }
 
 async function reviewSelection(provider: ChatViewProvider) {

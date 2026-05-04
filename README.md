@@ -17,6 +17,7 @@ Early but live. Sidebar chat now talks to **OpenAI**. Anthropic / Gemini / Ollam
   - `VibeLearn: Set API Key` — store an API key per provider in VS Code SecretStorage.
   - `VibeLearn: Clear API Key` — remove a stored key.
   - `VibeLearn: Review Selected Code` — select code in the editor, then run from Command Palette or right-click menu. Review lands in the sidebar chat with: what it does, what's good, what to improve, one hint to try next.
+  - `VibeLearn: Rewrite Prompt for Learning` — enter a normal coding prompt (e.g. "build me a React login page"). Local template-based rewrite turns it into a teaching-focused prompt. No AI call. Result opens in a new editor tab and is copied to your clipboard.
 - Settings: choose provider, model, and how much the assistant teaches vs. answers.
 
 ## Getting Started

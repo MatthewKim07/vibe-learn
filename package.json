@@ -30,6 +30,10 @@
       {
         "command": "vibelearn.reviewSelection",
         "title": "VibeLearn: Review Selected Code"
+      },
+      {
+        "command": "vibelearn.rewritePrompt",
+        "title": "VibeLearn: Rewrite Prompt for Learning"
       }
     ],
     "menus": {
@@ -98,7 +102,7 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "test": "tsc -p ./ && node --test out/ai/promptBuilder.test.js"
+    "test": "tsc -p ./ && node --test out/ai/promptBuilder.test.js out/promptRewrite.test.js"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

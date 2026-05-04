@@ -17,7 +17,7 @@ describe('createClient factory', () => {
     );
   });
 
-  const stubs: Provider[] = ['anthropic', 'gemini', 'openrouter', 'ollama'];
+  const stubs: Provider[] = ['anthropic', 'gemini', 'openrouter'];
 
   for (const p of stubs) {
     it(`returns a placeholder client for ${p}`, async () => {
@@ -31,4 +31,10 @@ describe('createClient factory', () => {
       );
     });
   }
+
+  it('returns a real Ollama client (no API key required)', () => {
+    const client = createClient({ provider: 'ollama' });
+    assert.equal(client.provider, 'ollama');
+    assert.equal(typeof client.complete, 'function');
+  });
 });

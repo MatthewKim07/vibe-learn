@@ -158,3 +158,44 @@ describe('buildMessages', () => {
     assert.match(out[0].content, /Current Learning Session/);
   });
 });
+
+describe('buildSystemPrompt — Socratic Mode', () => {
+  it('does NOT add Socratic section when socraticMode is false', () => {
+    for (const level of LEVELS) {
+      const p = buildSystemPrompt(level, false, false, false);
+      assert.ok(!p.includes('Socratic Mode'), `${level}: unexpected Socratic section`);
+    }
+  });
+
+  it('adds Socratic section for every level when enabled', () => {
+    for (const level of LEVELS) {
+      const p = buildSystemPrompt(level, false, false, true);
+      assert.match(p, /Socratic Mode/, `${level}: missing Socratic section`);
+    }
+  });
+
+  it('strict Socratic mode requires questions and forbids code blocks', () => {
+    const p = buildSystemPrompt('strict', false, false, true);
+    assert.match(p, /question/i);
+    assert.match(p, /code block/i);
+  });
+
+  it('full Socratic mode still allows full answers', () => {
+    const p = buildSystemPrompt('full', false, false, true);
+    assert.match(p, /full answer/i);
+  });
+
+  it('buildMessages passes socraticMode into system prompt', () => {
+    const history: ChatMessage[] = [{ role: 'user', content: 'hi' }];
+    const on = buildMessages({ level: 'guided', history, socraticMode: true });
+    assert.match(on[0].content, /Socratic Mode/);
+    const off = buildMessages({ level: 'guided', history, socraticMode: false });
+    assert.ok(!off[0].content.includes('Socratic Mode'));
+  });
+
+  it('Socratic Mode and Attempt-First can coexist', () => {
+    const p = buildSystemPrompt('guided', true, false, true);
+    assert.match(p, /Socratic Mode/);
+    assert.match(p, /Attempt-First/);
+  });
+});

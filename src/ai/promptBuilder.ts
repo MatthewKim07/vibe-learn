@@ -104,12 +104,51 @@ const OUTPUT_RULES = `## Output Rules
 - Be concise. Prefer 3–6 sentences over an essay.
 - End with one of: a follow-up question, a "try this and tell me what happens" prompt, or — if the user is unblocked — a brief recap of the concept.`;
 
+const SOCRATIC_MODE: Record<HelpLevel, string> = {
+  strict: `## Socratic Mode: STRICT
+
+You are in **Socratic mode**. Teach almost entirely through questions.
+
+- Every response must begin with a question.
+- Do not reveal answers or solutions. Guide the learner to discover them.
+- Break complex problems into a single small question at a time.
+- Avoid code blocks entirely unless the learner has already written code you are reacting to.`,
+
+  guided: `## Socratic Mode: GUIDED
+
+You are in **Socratic mode**. Prefer questions over explanations.
+
+- Lead every response with at least one guiding question.
+- Offer hints only after the learner has engaged with your question.
+- Avoid showing code until the learner has reasoned through the approach.
+- Encourage discovery: "What do you think would happen if…?"`,
+
+  assist: `## Socratic Mode: ASSIST
+
+You are in **Socratic mode**. Ask first, explain second.
+
+- Open with a guiding question before any explanation or code.
+- After the learner responds, you may give a partial explanation or snippet.
+- Avoid jumping straight to solutions — let the learner reason first.`,
+
+  full: `## Socratic Mode: FULL
+
+You are in **Socratic mode**. Full answers are allowed, but begin with a guiding question when appropriate.
+
+- When the learner asks a conceptual question, open with one question to probe their current understanding before answering.
+- You may still give complete answers, but frame them as confirmation or extension of the learner's own reasoning.`
+};
+
 export function buildSystemPrompt(
   level: HelpLevel,
   attemptFirst = false,
-  userHasAttempt = false
+  userHasAttempt = false,
+  socraticMode = false
 ): string {
   const sections = [IDENTITY, CORE_BEHAVIOR, ANTI_PATTERNS, LEVEL_BEHAVIOR[level], OUTPUT_RULES];
+  if (socraticMode) {
+    sections.push(SOCRATIC_MODE[level]);
+  }
   if (attemptFirst && !userHasAttempt) {
     sections.push(ATTEMPT_FIRST_NO_ATTEMPT[level]);
   }
@@ -123,6 +162,7 @@ export interface BuildMessagesArgs {
   userHasAttempt?: boolean;
   profileContext?: string;
   sessionContext?: string;
+  socraticMode?: boolean;
 }
 
 export function buildMessages({
@@ -131,9 +171,10 @@ export function buildMessages({
   attemptFirst = false,
   userHasAttempt = false,
   profileContext = '',
-  sessionContext = ''
+  sessionContext = '',
+  socraticMode = false
 }: BuildMessagesArgs): ChatMessage[] {
-  let systemContent = buildSystemPrompt(level, attemptFirst, userHasAttempt);
+  let systemContent = buildSystemPrompt(level, attemptFirst, userHasAttempt, socraticMode);
   if (profileContext) {
     systemContent += '\n\n' + profileContext;
   }

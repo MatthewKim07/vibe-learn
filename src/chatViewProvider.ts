@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { createClient } from './ai';
 import { buildMessages } from './ai/promptBuilder';
+import { buildRoadmapMessages } from './ai/roadmapPrompt';
 import { hasAttempt } from './ai/attemptDetector';
 import { AIError, ChatMessage, HelpLevel, Provider } from './ai/types';
 import { getApiKey } from './secrets';
@@ -74,6 +75,47 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     }
     this.webviewView.webview.postMessage({ type: 'userBubble', text: shown });
     await this.handleUserMessage(payload);
+  }
+
+  public async submitRoadmap(idea: string) {
+    await vscode.commands.executeCommand('vibelearn.chatView.focus');
+    if (!this.webviewView) {
+      this.pendingExternal = {
+        payload: idea,
+        displayText: `Create a project roadmap for: ${idea}`
+      };
+      return;
+    }
+
+    const cfg = vscode.workspace.getConfiguration('vibelearn');
+    const provider = cfg.get<Provider>('provider', 'openai');
+    const model = cfg.get<string>('model', 'gpt-4o-mini');
+    const helpLevel = cfg.get<HelpLevel>('helpLevel', 'guided');
+
+    this.webviewView.webview.postMessage({
+      type: 'userBubble',
+      text: `Create a project roadmap for: ${idea}`
+    });
+    this.postBusy(true);
+
+    try {
+      const apiKey = await getApiKey(this.context.secrets, provider);
+      const client = createClient({ provider, apiKey });
+      const messages = buildRoadmapMessages(idea, helpLevel);
+      const reply = await client.complete({ model, messages });
+      this.history.push(
+        { role: 'user', content: `Create a project roadmap for: ${idea}` },
+        { role: 'assistant', content: reply }
+      );
+      this.postAssistant(reply);
+    } catch (err) {
+      const message = err instanceof AIError
+        ? err.message
+        : err instanceof Error ? err.message : 'Unknown error.';
+      this.postError(message);
+    } finally {
+      this.postBusy(false);
+    }
   }
 
   private async applyHelpLevel(value: string) {

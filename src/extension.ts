@@ -44,6 +44,12 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('vibelearn.pickModel', pickModel)
   );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('vibelearn.createRoadmap', () =>
+      createRoadmap(provider)
+    )
+  );
 }
 
 async function rewritePromptCommand() {
@@ -195,6 +201,24 @@ async function clearApiKey(context: vscode.ExtensionContext) {
 
   await deleteApiKey(context.secrets, chosen);
   vscode.window.showInformationMessage(`VibeLearn: ${chosen} API key cleared.`);
+}
+
+async function createRoadmap(provider: ChatViewProvider) {
+  const idea = await vscode.window.showInputBox({
+    prompt: 'What project do you want to build?',
+    placeHolder: 'e.g. A weather app, a CLI todo list, a personal blog',
+    ignoreFocusOut: true,
+    validateInput: (v) => (v.trim().length === 0 ? 'Please enter a project idea.' : null)
+  });
+
+  if (!idea) {
+    vscode.window.showInformationMessage(
+      'VibeLearn: No idea entered. Run "VibeLearn: Create Project Roadmap" when you\'re ready.'
+    );
+    return;
+  }
+
+  await provider.submitRoadmap(idea.trim());
 }
 
 export function deactivate() {}

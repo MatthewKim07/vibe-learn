@@ -38,6 +38,10 @@
       {
         "command": "vibelearn.pickModel",
         "title": "VibeLearn: Pick Model"
+      },
+      {
+        "command": "vibelearn.createRoadmap",
+        "title": "VibeLearn: Create Project Roadmap"
       }
     ],
     "menus": {

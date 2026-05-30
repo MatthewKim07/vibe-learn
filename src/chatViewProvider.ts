@@ -44,12 +44,27 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       if (msg?.type === 'userMessage' && typeof msg.text === 'string') {
         await this.handleUserMessage(msg.text);
       } else if (msg?.type === 'webviewReady') {
-        this.postSettings();
+        await this.postSettings();
         if (this.pendingExternal) {
           const pending = this.pendingExternal;
           this.pendingExternal = undefined;
           await this.submitExternal(pending.payload, pending.displayText);
         }
+        // First-run welcome: only show when configured AND not yet completed
+        const hasCompleted = this.context.globalState.get<boolean>('vibelearn.hasCompletedFirstRun', false);
+        if (!hasCompleted) {
+          const cfg = vscode.workspace.getConfiguration('vibelearn');
+          const provider = cfg.get<Provider>('provider', 'openai');
+          const state = await getOnboardingState(this.context.secrets, provider);
+          if (isConfigured(state)) {
+            this.postFirstRunWelcome();
+          }
+        }
+      } else if (msg?.type === 'dismissFirstRun') {
+        await this.context.globalState.update('vibelearn.hasCompletedFirstRun', true);
+      } else if (msg?.type === 'startSession' && typeof msg.idea === 'string') {
+        await this.context.globalState.update('vibelearn.hasCompletedFirstRun', true);
+        await vscode.commands.executeCommand('vibelearn.startLearningSession', msg.idea);
       } else if (msg?.type === 'setHelpLevel' && typeof msg.value === 'string') {
         await this.applyHelpLevel(msg.value);
       } else if (msg?.type === 'clearChat') {
@@ -172,6 +187,16 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
   public async refreshSettings() {
     await this.postSettings();
+    // If the user just completed onboarding and hasn't seen the welcome yet, show it now
+    const hasCompleted = this.context.globalState.get<boolean>('vibelearn.hasCompletedFirstRun', false);
+    if (!hasCompleted) {
+      const cfg = vscode.workspace.getConfiguration('vibelearn');
+      const provider = cfg.get<Provider>('provider', 'openai');
+      const state = await getOnboardingState(this.context.secrets, provider);
+      if (isConfigured(state)) {
+        this.postFirstRunWelcome();
+      }
+    }
   }
 
   private async postSettings() {
@@ -262,6 +287,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
   private postAssistant(text: string) {
     this.webviewView?.webview.postMessage({ type: 'assistantMessage', text });
+  }
+
+  private postFirstRunWelcome() {
+    this.webviewView?.webview.postMessage({ type: 'firstRunWelcome' });
   }
 
   private postError(text: string) {
@@ -394,6 +423,20 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       font-size: 11px; font-family: inherit; cursor: pointer;
     }
     .action-btn:hover { background: var(--vscode-list-hoverBackground); }
+    .starter-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .starter-chip {
+      background: var(--vscode-button-background);
+      color: var(--vscode-button-foreground);
+      border: none; border-radius: 12px;
+      padding: 4px 10px; font-size: 12px; font-family: inherit; cursor: pointer;
+    }
+    .starter-chip:hover { background: var(--vscode-button-hoverBackground); }
+    .dismiss-link {
+      display: block; margin-top: 8px; font-size: 11px;
+      color: var(--vscode-descriptionForeground); cursor: pointer; background: none; border: none;
+      text-align: left; padding: 0; font-family: inherit;
+    }
+    .dismiss-link:hover { text-decoration: underline; }
     #onboarding {
       margin: 8px 10px;
       padding: 10px 12px;
@@ -724,6 +767,36 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         append(msg.text, 'error');
       } else if (msg.type === 'userBubble') {
         append(msg.text, 'user');
+      } else if (msg.type === 'firstRunWelcome') {
+        clearWelcome();
+        const el = document.createElement('div');
+        el.className = 'msg assistant';
+        el.innerHTML = '<strong>👋 Welcome to VibeLearn!</strong><br><br>' +
+          'The best way to learn is by building.<br><br>' +
+          '<strong>Try this:</strong><br>' +
+          '1. Start a Learning Session<br>' +
+          '2. Enter a project idea<br>' +
+          '3. Follow the milestones<br>' +
+          '4. Use Reflection Questions and Test My Understanding to reinforce learning<br><br>' +
+          'Would you like to build something? Pick a starter:' +
+          '<div class="starter-chips">' +
+          '<button class="starter-chip" data-idea="A Todo App">Todo App</button>' +
+          '<button class="starter-chip" data-idea="A Discord Bot">Discord Bot</button>' +
+          '<button class="starter-chip" data-idea="A Personal Portfolio">Portfolio</button>' +
+          '</div>' +
+          '<button class="dismiss-link" id="dismiss-welcome">Dismiss</button>';
+        messagesEl.appendChild(el);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+        el.querySelectorAll('.starter-chip').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            vscode.postMessage({ type: 'startSession', idea: btn.getAttribute('data-idea') });
+            el.remove();
+          });
+        });
+        el.querySelector('#dismiss-welcome').addEventListener('click', () => {
+          vscode.postMessage({ type: 'dismissFirstRun' });
+          el.remove();
+        });
       } else if (msg.type === 'busy') {
         showTyping(!!msg.busy);
         sendBtn.disabled = !!msg.busy;

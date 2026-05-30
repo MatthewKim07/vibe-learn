@@ -63,6 +63,7 @@ Open the Command Palette with `Cmd+Shift+P` (Mac) or `Ctrl+Shift+P` (Win/Linux) 
 | `VibeLearn: Reflection Check` | Generate 3 reflection questions based on selected code or your active learning session. |
 | `VibeLearn: Toggle Socratic Mode` | Flip Socratic Mode on or off. Shows a notification confirming the new state. |
 | `VibeLearn: Explain Back` | Enter a concept and your explanation; get encouraging feedback on what you understand and what to refine. |
+| `VibeLearn: Show Workspace Context` | Open a Markdown document showing the workspace name, top-level folders, and files VibeLearn sees. |
 | `VibeLearn: Show Learning Profile` | Open a Markdown document showing your tracked concepts, strengths, and struggles. |
 | `VibeLearn: Clear Learning Profile` | Wipe your local learning profile after confirmation. |
 
@@ -77,6 +78,7 @@ Open the Command Palette with `Cmd+Shift+P` (Mac) or `Ctrl+Shift+P` (Win/Linux) 
 | `vibelearn.helpLevel` | `strict`, `guided`, `assist`, `full` | `guided` | How much VibeLearn teaches vs. answers directly. Also editable from the sidebar header. |
 | `vibelearn.attemptFirst` | boolean | `true` | Ask the user to explain or try an approach before providing code-focused help. |
 | `vibelearn.socraticMode` | boolean | `false` | Prefer teaching through guided questions rather than direct answers. Toggle with `VibeLearn: Toggle Socratic Mode`. |
+| `vibelearn.includeWorkspaceContext` | boolean | `true` | Include lightweight workspace structure (top-level files and folders) in teaching prompts. |
 
 ### Help levels
 
@@ -206,6 +208,8 @@ You can clear a key any time with `VibeLearn: Clear API Key`. Ollama uses no key
 │   ├── learningProfile.test.ts
 │   ├── learningSession.ts       # learning session / project mode (globalState)
 │   ├── learningSession.test.ts
+│   ├── workspaceContext.ts      # workspace structure reader and formatter
+│   ├── workspaceContext.test.ts
 │   └── ai/
 │       ├── types.ts             # AIClient, AIRequest, AIError, Provider, ChatMessage
 │       ├── promptBuilder.ts     # teaching system prompt per helpLevel

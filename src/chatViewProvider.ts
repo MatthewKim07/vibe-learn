@@ -173,7 +173,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       type: 'settings',
       provider: cfg.get<Provider>('provider', 'openai'),
       model: cfg.get<string>('model', ''),
-      helpLevel: cfg.get<HelpLevel>('helpLevel', 'guided')
+      helpLevel: cfg.get<HelpLevel>('helpLevel', 'guided'),
+      socraticMode: cfg.get<boolean>('socraticMode', false)
     });
   }
 
@@ -183,6 +184,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     const model = cfg.get<string>('model', 'gpt-4o-mini');
     const helpLevel = cfg.get<HelpLevel>('helpLevel', 'guided');
     const attemptFirst = cfg.get<boolean>('attemptFirst', true);
+    const socraticMode = cfg.get<boolean>('socraticMode', false);
 
     const profile = getLearningProfile(this.context);
     const profileContext = formatLearningProfileForPrompt(profile);
@@ -203,7 +205,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         attemptFirst,
         userHasAttempt: hasAttempt(text),
         profileContext,
-        sessionContext
+        sessionContext,
+        socraticMode
       });
 
       const reply = await client.complete({ model, messages });
@@ -517,6 +520,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   <div class="meta">
     <span id="meta-provider">provider: —</span>
     <span id="meta-model">model: —</span>
+    <span id="meta-mode" style="display:none">🔍 Socratic</span>
     <button class="linkbtn" id="btn-pick-model" type="button">change model</button>
     <button class="linkbtn" id="btn-set-key" type="button">set API key</button>
     <button class="linkbtn" id="btn-clear" type="button">clear chat</button>
@@ -548,6 +552,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     const levelEl = document.getElementById('level');
     const metaProvider = document.getElementById('meta-provider');
     const metaModel = document.getElementById('meta-model');
+    const metaMode = document.getElementById('meta-mode');
     let typingEl = null;
 
     function clearWelcome() {
@@ -632,6 +637,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         if (msg.helpLevel) levelEl.value = msg.helpLevel;
         if (msg.provider) metaProvider.textContent = 'provider: ' + msg.provider;
         if (msg.model) metaModel.textContent = 'model: ' + msg.model;
+        if (metaMode) metaMode.style.display = msg.socraticMode ? 'inline' : 'none';
       }
     });
 

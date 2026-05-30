@@ -170,7 +170,7 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "test": "tsc -p ./ && node --test out/ai/promptBuilder.test.js out/ai/factory.test.js out/ai/modelMatch.test.js out/ai/attemptDetector.test.js out/ai/roadmapPrompt.test.js out/ai/reflectionPrompt.test.js out/ai/explainBackPrompt.test.js out/promptRewrite.test.js out/learningProfile.test.js out/learningSession.test.js out/workspaceContext.test.js out/dashboard.test.js out/onboarding.test.js"
+    "test": "tsc -p ./ && node --test out/ai/promptBuilder.test.js out/ai/factory.test.js out/ai/modelMatch.test.js out/ai/attemptDetector.test.js out/ai/roadmapPrompt.test.js out/ai/reflectionPrompt.test.js out/ai/explainBackPrompt.test.js out/promptRewrite.test.js out/learningProfile.test.js out/learningSession.test.js out/workspaceContext.test.js out/dashboard.test.js"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

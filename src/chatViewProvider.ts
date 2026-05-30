@@ -13,6 +13,7 @@ import {
 } from './learningProfile';
 import { formatSessionForPrompt, getCurrentSession } from './learningSession';
 import { formatWorkspaceContextForPrompt, getWorkspaceContext } from './workspaceContext';
+import { getOnboardingState, isConfigured } from './onboarding';
 
 const HELP_LEVELS: HelpLevel[] = ['strict', 'guided', 'assist', 'full'];
 
@@ -169,15 +170,18 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       .update('helpLevel', value, vscode.ConfigurationTarget.Global);
   }
 
-  private postSettings() {
+  private async postSettings() {
     if (!this.webviewView) return;
     const cfg = vscode.workspace.getConfiguration('vibelearn');
+    const provider = cfg.get<Provider>('provider', 'openai');
+    const state = await getOnboardingState(this.context.secrets, provider);
     this.webviewView.webview.postMessage({
       type: 'settings',
-      provider: cfg.get<Provider>('provider', 'openai'),
+      provider,
       model: cfg.get<string>('model', ''),
       helpLevel: cfg.get<HelpLevel>('helpLevel', 'guided'),
-      socraticMode: cfg.get<boolean>('socraticMode', false)
+      socraticMode: cfg.get<boolean>('socraticMode', false),
+      configured: isConfigured(state)
     });
   }
 
@@ -188,6 +192,15 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     const helpLevel = cfg.get<HelpLevel>('helpLevel', 'guided');
     const attemptFirst = cfg.get<boolean>('attemptFirst', true);
     const socraticMode = cfg.get<boolean>('socraticMode', false);
+
+    // Onboarding gate: friendly message before raw provider errors
+    const onboardingState = await getOnboardingState(this.context.secrets, provider);
+    if (!isConfigured(onboardingState)) {
+      this.postAssistant(
+        'Before chatting, choose a model and configure access.\n\nRun **VibeLearn: Pick Model** to choose a provider, then **VibeLearn: Set API Key** to add your key.\n\nIf you\'re using Ollama, set `vibelearn.provider` to `ollama` in settings — no key needed.'
+      );
+      return;
+    }
 
     const profile = getLearningProfile(this.context);
     const profileContext = formatLearningProfileForPrompt(profile);
@@ -377,6 +390,28 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       font-size: 11px; font-family: inherit; cursor: pointer;
     }
     .action-btn:hover { background: var(--vscode-list-hoverBackground); }
+    #onboarding {
+      margin: 8px 10px;
+      padding: 10px 12px;
+      background: var(--vscode-editorWidget-background);
+      border: 1px solid var(--vscode-focusBorder, rgba(200,182,226,0.3));
+      border-radius: 6px;
+      display: none;
+    }
+    #onboarding h3 { margin: 0 0 6px; font-size: 13px; font-weight: 600; }
+    #onboarding p { margin: 0 0 8px; font-size: 12px; color: var(--vscode-descriptionForeground); line-height: 1.4; }
+    #onboarding ol { margin: 0 0 10px; padding-left: 18px; font-size: 12px; color: var(--vscode-descriptionForeground); }
+    #onboarding ol li { margin-bottom: 2px; }
+    .onboarding-btns { display: flex; gap: 6px; }
+    .onboarding-btns button {
+      flex: 1;
+      padding: 5px 8px;
+      background: var(--vscode-button-background);
+      color: var(--vscode-button-foreground);
+      border: none; border-radius: 4px; cursor: pointer;
+      font-size: 12px; font-family: inherit; font-weight: 500;
+    }
+    .onboarding-btns button:hover { background: var(--vscode-button-hoverBackground); }
     #messages {
       flex: 1; overflow-y: auto;
       padding: 12px;
@@ -554,10 +589,22 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     <button class="linkbtn" id="btn-set-key" type="button">set API key</button>
     <button class="linkbtn" id="btn-clear" type="button">clear chat</button>
   </div>
-  <div id="actions">
+  <div id="onboarding" role="region" aria-label="Setup required">
+    <h3>👋 Welcome to VibeLearn</h3>
+    <p>Learn programming by building projects with guided AI teaching.</p>
+    <ol>
+      <li>Choose a model provider</li>
+      <li>Configure access</li>
+      <li>Start learning</li>
+    </ol>
+    <div class="onboarding-btns">
+      <button type="button" data-cmd="vibelearn.pickModel" title="Choose your AI provider and model">Choose Model</button>
+      <button type="button" data-cmd="vibelearn.setApiKey" title="Add your API key (not needed for Ollama)">Set API Key</button>
+    </div>
+  </div>
+  <div id="actions" style="display:none">
     <div class="action-group">
-      <span class="action-label">Project</span>
-      <button class="action-btn" type="button" data-cmd="vibelearn.startLearningSession" title="Start a new learning session">Start Session</button>
+      <span class="action-label">Project</span>      <button class="action-btn" type="button" data-cmd="vibelearn.startLearningSession" title="Start a new learning session">Start Session</button>
       <button class="action-btn" type="button" data-cmd="vibelearn.openDashboard" title="Open learning dashboard">Dashboard</button>
       <button class="action-btn" type="button" data-cmd="vibelearn.suggestNextStep" title="Get a next step suggestion">Next Step</button>
       <button class="action-btn" type="button" data-cmd="vibelearn.completeCurrentMilestone" title="Mark current milestone complete">✓ Milestone</button>
@@ -608,6 +655,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     const metaProvider = document.getElementById('meta-provider');
     const metaModel = document.getElementById('meta-model');
     const metaMode = document.getElementById('meta-mode');
+    const onboardingEl = document.getElementById('onboarding');
+    const actionsEl = document.getElementById('actions');
     let typingEl = null;
 
     function clearWelcome() {
@@ -658,10 +707,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       vscode.postMessage({ type: 'setHelpLevel', value: levelEl.value });
     });
 
-    document.getElementById('actions').addEventListener('click', (e) => {
+    function dispatchCmd(e) {
       const btn = e.target.closest('[data-cmd]');
       if (btn) vscode.postMessage({ type: 'command', command: btn.getAttribute('data-cmd') });
-    });
+    }
+    document.getElementById('actions').addEventListener('click', dispatchCmd);
+    document.getElementById('onboarding').addEventListener('click', dispatchCmd);
 
     document.getElementById('btn-pick-model').addEventListener('click', () => {
       vscode.postMessage({ type: 'pickModel' });
@@ -698,6 +749,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         if (msg.provider) metaProvider.textContent = 'provider: ' + msg.provider;
         if (msg.model) metaModel.textContent = 'model: ' + msg.model;
         if (metaMode) metaMode.style.display = msg.socraticMode ? 'inline' : 'none';
+        const configured = !!msg.configured;
+        if (onboardingEl) onboardingEl.style.display = configured ? 'none' : 'block';
+        if (actionsEl) actionsEl.style.display = configured ? 'flex' : 'none';
       }
     });
 

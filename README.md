@@ -61,6 +61,7 @@ Open the Command Palette with `Cmd+Shift+P` (Mac) or `Ctrl+Shift+P` (Win/Linux) 
 | `VibeLearn: Complete Current Milestone` | Mark the current milestone done and advance to the next one. |
 | `VibeLearn: Suggest Next Step` | Get a focused suggestion for your current milestone: why it matters, what to try, and one hint. |
 | `VibeLearn: Reflection Check` | Generate 3 reflection questions based on selected code or your active learning session. |
+| `VibeLearn: Toggle Socratic Mode` | Flip Socratic Mode on or off. Shows a notification confirming the new state. |
 | `VibeLearn: Show Learning Profile` | Open a Markdown document showing your tracked concepts, strengths, and struggles. |
 | `VibeLearn: Clear Learning Profile` | Wipe your local learning profile after confirmation. |
 
@@ -73,6 +74,8 @@ Open the Command Palette with `Cmd+Shift+P` (Mac) or `Ctrl+Shift+P` (Win/Linux) 
 | `vibelearn.provider` | `openai`, `anthropic`, `gemini`, `openrouter`, `ollama` | `openai` | Which backend to call. `openai` and `ollama` are wired today; the rest return a "not implemented" message. |
 | `vibelearn.model` | any string | `gpt-4o-mini` | Model id for the selected provider (e.g. `gpt-4o-mini`, `claude-sonnet-4-6`, `llama3.2`). |
 | `vibelearn.helpLevel` | `strict`, `guided`, `assist`, `full` | `guided` | How much VibeLearn teaches vs. answers directly. Also editable from the sidebar header. |
+| `vibelearn.attemptFirst` | boolean | `true` | Ask the user to explain or try an approach before providing code-focused help. |
+| `vibelearn.socraticMode` | boolean | `false` | Prefer teaching through guided questions rather than direct answers. Toggle with `VibeLearn: Toggle Socratic Mode`. |
 
 ### Help levels
 

@@ -62,6 +62,7 @@ Open the Command Palette with `Cmd+Shift+P` (Mac) or `Ctrl+Shift+P` (Win/Linux) 
 | `VibeLearn: Suggest Next Step` | Get a focused suggestion for your current milestone: why it matters, what to try, and one hint. |
 | `VibeLearn: Reflection Check` | Generate 3 reflection questions based on selected code or your active learning session. |
 | `VibeLearn: Toggle Socratic Mode` | Flip Socratic Mode on or off. Shows a notification confirming the new state. |
+| `VibeLearn: Explain Back` | Enter a concept and your explanation; get encouraging feedback on what you understand and what to refine. |
 | `VibeLearn: Show Learning Profile` | Open a Markdown document showing your tracked concepts, strengths, and struggles. |
 | `VibeLearn: Clear Learning Profile` | Wipe your local learning profile after confirmation. |
 
@@ -215,6 +216,8 @@ You can clear a key any time with `VibeLearn: Clear API Key`. Ollama uses no key
 │       ├── attemptDetector.test.ts
 │       ├── reflectionPrompt.ts  # reflection question builder
 │       ├── reflectionPrompt.test.ts
+│       ├── explainBackPrompt.ts # explain-back review builder
+│       ├── explainBackPrompt.test.ts
 │       ├── modelMatch.ts        # fuzzy Ollama model resolution
 │       ├── modelMatch.test.ts
 │       ├── notImplementedClient.ts

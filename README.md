@@ -64,6 +64,7 @@ Open the Command Palette with `Cmd+Shift+P` (Mac) or `Ctrl+Shift+P` (Win/Linux) 
 | `VibeLearn: Toggle Socratic Mode` | Flip Socratic Mode on or off. Shows a notification confirming the new state. |
 | `VibeLearn: Explain Back` | Enter a concept and your explanation; get encouraging feedback on what you understand and what to refine. |
 | `VibeLearn: Show Workspace Context` | Open a Markdown document showing the workspace name, top-level folders, and files VibeLearn sees. |
+| `VibeLearn: Open Learning Dashboard` | Open a Markdown document showing your active session, milestones, learning profile, and teaching mode settings. |
 | `VibeLearn: Show Learning Profile` | Open a Markdown document showing your tracked concepts, strengths, and struggles. |
 | `VibeLearn: Clear Learning Profile` | Wipe your local learning profile after confirmation. |
 
@@ -210,6 +211,8 @@ You can clear a key any time with `VibeLearn: Clear API Key`. Ollama uses no key
 │   ├── learningSession.test.ts
 │   ├── workspaceContext.ts      # workspace structure reader and formatter
 │   ├── workspaceContext.test.ts
+│   ├── dashboard.ts             # learning dashboard markdown builder
+│   ├── dashboard.test.ts
 │   └── ai/
 │       ├── types.ts             # AIClient, AIRequest, AIError, Provider, ChatMessage
 │       ├── promptBuilder.ts     # teaching system prompt per helpLevel

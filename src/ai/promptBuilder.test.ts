@@ -132,4 +132,29 @@ describe('buildMessages', () => {
     const withoutAttemptFirst = buildMessages({ level: 'strict', history, attemptFirst: false });
     assert.ok(!withoutAttemptFirst[0].content.includes('Attempt-First'));
   });
+
+  it('includes sessionContext in system prompt when provided', () => {
+    const history: ChatMessage[] = [{ role: 'user', content: 'hi' }];
+    const out = buildMessages({ level: 'guided', history, sessionContext: '## Current Learning Session\nProject: Blog' });
+    assert.match(out[0].content, /Current Learning Session/);
+    assert.match(out[0].content, /Blog/);
+  });
+
+  it('does not add session section when sessionContext is empty', () => {
+    const history: ChatMessage[] = [{ role: 'user', content: 'hi' }];
+    const out = buildMessages({ level: 'guided', history, sessionContext: '' });
+    assert.ok(!out[0].content.includes('Current Learning Session'));
+  });
+
+  it('includes both profileContext and sessionContext when both provided', () => {
+    const history: ChatMessage[] = [{ role: 'user', content: 'hi' }];
+    const out = buildMessages({
+      level: 'guided',
+      history,
+      profileContext: '## Learner Context\n- Concepts seen: loop',
+      sessionContext: '## Current Learning Session\nProject: Todo App'
+    });
+    assert.match(out[0].content, /Learner Context/);
+    assert.match(out[0].content, /Current Learning Session/);
+  });
 });

@@ -125,6 +125,40 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
+  public async submitFocused(
+    messages: ChatMessage[],
+    displayText: string,
+    opts: { model: string; providerName: Provider }
+  ) {
+    await vscode.commands.executeCommand('vibelearn.chatView.focus');
+    if (!this.webviewView) {
+      // Fall back: queue as a normal external message
+      this.pendingExternal = { payload: messages[messages.length - 1].content, displayText };
+      return;
+    }
+
+    this.webviewView.webview.postMessage({ type: 'userBubble', text: displayText });
+    this.postBusy(true);
+
+    try {
+      const apiKey = await getApiKey(this.context.secrets, opts.providerName);
+      const client = createClient({ provider: opts.providerName, apiKey });
+      const reply = await client.complete({ model: opts.model, messages });
+      this.history.push(
+        { role: 'user', content: messages[messages.length - 1].content },
+        { role: 'assistant', content: reply }
+      );
+      this.postAssistant(reply);
+    } catch (err) {
+      const message = err instanceof AIError
+        ? err.message
+        : err instanceof Error ? err.message : 'Unknown error.';
+      this.postError(message);
+    } finally {
+      this.postBusy(false);
+    }
+  }
+
   private async applyHelpLevel(value: string) {
     if (!HELP_LEVELS.includes(value as HelpLevel)) return;
     await vscode.workspace

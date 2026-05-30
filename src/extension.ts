@@ -96,6 +96,12 @@ export function activate(context: vscode.ExtensionContext) {
       completeCurrentMilestone(context)
     )
   );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('vibelearn.suggestNextStep', () =>
+      suggestNextStep(context, provider)
+    )
+  );
 }
 
 async function rewritePromptCommand() {
@@ -426,6 +432,55 @@ async function completeCurrentMilestone(context: vscode.ExtensionContext) {
       `VibeLearn: Milestone complete! Next up: "${next.title}"`
     );
   }
+}
+
+async function suggestNextStep(
+  context: vscode.ExtensionContext,
+  chatProvider: ChatViewProvider
+) {
+  const session = getCurrentSession(context);
+  if (!session) {
+    vscode.window.showInformationMessage(
+      'VibeLearn: No active session. Run "VibeLearn: Start Learning Session" first.'
+    );
+    return;
+  }
+
+  const active = session.milestones[session.activeMilestoneIndex];
+  if (!active) {
+    vscode.window.showInformationMessage('VibeLearn: All milestones are already completed! 🎉');
+    return;
+  }
+
+  const cfg = vscode.workspace.getConfiguration('vibelearn');
+  const providerName = cfg.get<Provider>('provider', 'openai');
+  const model = cfg.get<string>('model', 'gpt-4o-mini');
+
+  const profile = getLearningProfile(context);
+  const profileSnippet = formatLearningProfileForPrompt(profile);
+
+  const systemContent = [
+    'You are VibeLearn, a learning-first coding tutor.',
+    'Give a short, focused "next step" suggestion. Keep it under 200 words.',
+    'Structure your reply with exactly these four items:',
+    '**Current milestone:** <milestone name>',
+    '**Why it matters:** <one sentence>',
+    '**What to try next:** <one concrete action the learner can attempt right now>',
+    '**One hint:** <a single nudge if they get stuck>',
+    'Do not generate full code.',
+    profileSnippet
+  ].filter(Boolean).join('\n');
+
+  const userContent = `I am working on "${session.projectName}". My current milestone is: "${active.title}". What should I try next?`;
+
+  await chatProvider.submitFocused(
+    [
+      { role: 'system', content: systemContent },
+      { role: 'user', content: userContent }
+    ],
+    `Suggest next step for: ${active.title}`,
+    { model, providerName }
+  );
 }
 
 export function deactivate() {}

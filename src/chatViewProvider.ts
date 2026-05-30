@@ -5,6 +5,12 @@ import { buildRoadmapMessages } from './ai/roadmapPrompt';
 import { hasAttempt } from './ai/attemptDetector';
 import { AIError, ChatMessage, HelpLevel, Provider } from './ai/types';
 import { getApiKey } from './secrets';
+import {
+  extractProfileUpdate,
+  formatLearningProfileForPrompt,
+  getLearningProfile,
+  updateLearningProfile
+} from './learningProfile';
 
 const HELP_LEVELS: HelpLevel[] = ['strict', 'guided', 'assist', 'full'];
 
@@ -143,6 +149,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     const helpLevel = cfg.get<HelpLevel>('helpLevel', 'guided');
     const attemptFirst = cfg.get<boolean>('attemptFirst', true);
 
+    const profile = getLearningProfile(this.context);
+    const profileContext = formatLearningProfileForPrompt(profile);
+
     this.history.push({ role: 'user', content: text });
     this.postBusy(true);
 
@@ -154,12 +163,23 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         level: helpLevel,
         history: this.history,
         attemptFirst,
-        userHasAttempt: hasAttempt(text)
+        userHasAttempt: hasAttempt(text),
+        profileContext
       });
 
       const reply = await client.complete({ model, messages });
       this.history.push({ role: 'assistant', content: reply });
       this.postAssistant(reply);
+
+      // Update profile from the AI reply (fire-and-forget, non-blocking)
+      const profileUpdate = extractProfileUpdate(reply);
+      if (
+        profileUpdate.conceptsSeen?.length ||
+        profileUpdate.strengths?.length ||
+        profileUpdate.struggles?.length
+      ) {
+        updateLearningProfile(this.context, profileUpdate).catch(() => {/* ignore */});
+      }
     } catch (err) {
       const message = err instanceof AIError
         ? err.message

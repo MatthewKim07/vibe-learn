@@ -9,6 +9,11 @@ import {
   promptForApiKey,
   storeApiKey
 } from './secrets';
+import {
+  clearLearningProfile,
+  formatLearningProfileForPrompt,
+  getLearningProfile
+} from './learningProfile';
 
 export function activate(context: vscode.ExtensionContext) {
   const provider = new ChatViewProvider(context);
@@ -48,6 +53,18 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('vibelearn.createRoadmap', () =>
       createRoadmap(provider)
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('vibelearn.showLearningProfile', () =>
+      showLearningProfile(context)
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('vibelearn.clearLearningProfile', () =>
+      clearLearningProfileCommand(context)
     )
   );
 }
@@ -219,6 +236,47 @@ async function createRoadmap(provider: ChatViewProvider) {
   }
 
   await provider.submitRoadmap(idea.trim());
+}
+
+async function showLearningProfile(context: vscode.ExtensionContext) {
+  const profile = getLearningProfile(context);
+  const formatted = formatLearningProfileForPrompt(profile);
+
+  const lines: string[] = ['# VibeLearn — Learning Profile', ''];
+
+  if (!formatted) {
+    lines.push('_No learning data yet. Start chatting to build your profile._');
+  } else {
+    if (profile.conceptsSeen.length > 0) {
+      lines.push('## Concepts Seen', '', profile.conceptsSeen.map((c) => `- ${c}`).join('\n'), '');
+    }
+    if (profile.strengths.length > 0) {
+      lines.push('## Strengths', '', profile.strengths.map((s) => `- ${s}`).join('\n'), '');
+    }
+    if (profile.struggles.length > 0) {
+      lines.push('## Struggles', '', profile.struggles.map((s) => `- ${s}`).join('\n'), '');
+    }
+    if (profile.lastUpdated) {
+      lines.push(`---`, `_Last updated: ${new Date(profile.lastUpdated).toLocaleString()}_`);
+    }
+  }
+
+  const doc = await vscode.workspace.openTextDocument({
+    language: 'markdown',
+    content: lines.join('\n')
+  });
+  await vscode.window.showTextDocument(doc, { preview: true });
+}
+
+async function clearLearningProfileCommand(context: vscode.ExtensionContext) {
+  const answer = await vscode.window.showWarningMessage(
+    'Clear your VibeLearn learning profile? This cannot be undone.',
+    { modal: true },
+    'Clear'
+  );
+  if (answer !== 'Clear') return;
+  await clearLearningProfile(context);
+  vscode.window.showInformationMessage('VibeLearn: Learning profile cleared.');
 }
 
 export function deactivate() {}

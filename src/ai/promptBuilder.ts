@@ -121,16 +121,22 @@ export interface BuildMessagesArgs {
   history: ChatMessage[];
   attemptFirst?: boolean;
   userHasAttempt?: boolean;
+  profileContext?: string;
 }
 
 export function buildMessages({
   level,
   history,
   attemptFirst = false,
-  userHasAttempt = false
+  userHasAttempt = false,
+  profileContext = ''
 }: BuildMessagesArgs): ChatMessage[] {
+  let systemContent = buildSystemPrompt(level, attemptFirst, userHasAttempt);
+  if (profileContext) {
+    systemContent += '\n\n' + profileContext;
+  }
   return [
-    { role: 'system', content: buildSystemPrompt(level, attemptFirst, userHasAttempt) },
+    { role: 'system', content: systemContent },
     ...history.filter((m) => m.role !== 'system')
   ];
 }

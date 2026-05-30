@@ -11,6 +11,7 @@ import {
   getLearningProfile,
   updateLearningProfile
 } from './learningProfile';
+import { formatSessionForPrompt, getCurrentSession } from './learningSession';
 
 const HELP_LEVELS: HelpLevel[] = ['strict', 'guided', 'assist', 'full'];
 
@@ -152,6 +153,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     const profile = getLearningProfile(this.context);
     const profileContext = formatLearningProfileForPrompt(profile);
 
+    const session = getCurrentSession(this.context);
+    const sessionContext = session ? formatSessionForPrompt(session) : '';
+
     this.history.push({ role: 'user', content: text });
     this.postBusy(true);
 
@@ -164,7 +168,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         history: this.history,
         attemptFirst,
         userHasAttempt: hasAttempt(text),
-        profileContext
+        profileContext,
+        sessionContext
       });
 
       const reply = await client.complete({ model, messages });

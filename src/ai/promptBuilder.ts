@@ -122,6 +122,7 @@ export interface BuildMessagesArgs {
   attemptFirst?: boolean;
   userHasAttempt?: boolean;
   profileContext?: string;
+  sessionContext?: string;
 }
 
 export function buildMessages({
@@ -129,11 +130,15 @@ export function buildMessages({
   history,
   attemptFirst = false,
   userHasAttempt = false,
-  profileContext = ''
+  profileContext = '',
+  sessionContext = ''
 }: BuildMessagesArgs): ChatMessage[] {
   let systemContent = buildSystemPrompt(level, attemptFirst, userHasAttempt);
   if (profileContext) {
     systemContent += '\n\n' + profileContext;
+  }
+  if (sessionContext) {
+    systemContent += '\n\n' + sessionContext;
   }
   return [
     { role: 'system', content: systemContent },

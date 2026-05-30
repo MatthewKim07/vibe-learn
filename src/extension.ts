@@ -14,6 +14,17 @@ import {
   formatLearningProfileForPrompt,
   getLearningProfile
 } from './learningProfile';
+import {
+  clearCurrentSession,
+  createSession,
+  extractMilestonesFromRoadmap,
+  getCurrentSession,
+  saveSession
+} from './learningSession';
+import { createClient } from './ai';
+import { buildRoadmapMessages } from './ai/roadmapPrompt';
+import { AIError, HelpLevel } from './ai/types';
+import { getApiKey } from './secrets';
 
 export function activate(context: vscode.ExtensionContext) {
   const provider = new ChatViewProvider(context);
@@ -65,6 +76,24 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('vibelearn.clearLearningProfile', () =>
       clearLearningProfileCommand(context)
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('vibelearn.startLearningSession', () =>
+      startLearningSession(context, provider)
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('vibelearn.showLearningSession', () =>
+      showLearningSession(context)
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('vibelearn.completeCurrentMilestone', () =>
+      completeCurrentMilestone(context)
     )
   );
 }
@@ -277,6 +306,126 @@ async function clearLearningProfileCommand(context: vscode.ExtensionContext) {
   if (answer !== 'Clear') return;
   await clearLearningProfile(context);
   vscode.window.showInformationMessage('VibeLearn: Learning profile cleared.');
+}
+
+async function startLearningSession(
+  context: vscode.ExtensionContext,
+  chatProvider: ChatViewProvider
+) {
+  const idea = await vscode.window.showInputBox({
+    prompt: 'What project do you want to learn by building?',
+    placeHolder: 'e.g. A weather app, a CLI todo list, a personal blog',
+    ignoreFocusOut: true,
+    validateInput: (v) => (v.trim().length === 0 ? 'Please enter a project idea.' : null)
+  });
+  if (!idea) return;
+
+  const cfg = vscode.workspace.getConfiguration('vibelearn');
+  const providerName = cfg.get<Provider>('provider', 'openai');
+  const model = cfg.get<string>('model', 'gpt-4o-mini');
+  const helpLevel = cfg.get<HelpLevel>('helpLevel', 'guided');
+
+  await vscode.window.withProgress(
+    { location: vscode.ProgressLocation.Notification, title: 'VibeLearn: Generating roadmap…', cancellable: false },
+    async () => {
+      try {
+        const apiKey = await getApiKey(context.secrets, providerName);
+        const client = createClient({ provider: providerName, apiKey });
+        const messages = buildRoadmapMessages(idea.trim(), helpLevel);
+        const roadmap = await client.complete({ model, messages });
+
+        const milestones = extractMilestonesFromRoadmap(roadmap);
+        if (milestones.length === 0) {
+          vscode.window.showWarningMessage(
+            'VibeLearn: Could not extract milestones from the roadmap. Try again or rephrase your idea.'
+          );
+          return;
+        }
+
+        // Extract goal from roadmap (first paragraph after "## Goal")
+        const goalMatch = roadmap.match(/##\s+Goal\s*\n+([\s\S]+?)(?=\n##|\n###|$)/);
+        const goal = goalMatch ? goalMatch[1].trim() : idea.trim();
+
+        const session = createSession(idea.trim(), goal, milestones);
+        await saveSession(context, session);
+
+        // Show roadmap in sidebar and confirm session started
+        await chatProvider.submitRoadmap(idea.trim());
+        vscode.window.showInformationMessage(
+          `VibeLearn: Session started! ${milestones.length} milestones. First: "${milestones[0]}"`
+        );
+      } catch (err) {
+        const msg = err instanceof AIError ? err.message : err instanceof Error ? err.message : 'Unknown error.';
+        vscode.window.showErrorMessage(`VibeLearn: Failed to start session — ${msg}`);
+      }
+    }
+  );
+}
+
+async function showLearningSession(context: vscode.ExtensionContext) {
+  const session = getCurrentSession(context);
+
+  const lines = ['# VibeLearn — Learning Session', ''];
+
+  if (!session) {
+    lines.push('_No active session. Run **VibeLearn: Start Learning Session** to begin._');
+  } else {
+    const active = session.milestones[session.activeMilestoneIndex];
+    const total = session.milestones.length;
+    const done = session.milestones.filter((m) => m.completed).length;
+
+    lines.push(
+      `**Project:** ${session.projectName}`,
+      `**Current Milestone:** ${active ? active.title : '🎉 All done!'}`,
+      `**Progress:** ${done}/${total}`,
+      '',
+      '## Milestones',
+      ''
+    );
+
+    for (const m of session.milestones) {
+      lines.push(`${m.completed ? '☑' : '☐'} ${m.title}`);
+    }
+
+    lines.push('', '---', `_Started: ${new Date(session.createdAt).toLocaleString()}_`);
+  }
+
+  const doc = await vscode.workspace.openTextDocument({
+    language: 'markdown',
+    content: lines.join('\n')
+  });
+  await vscode.window.showTextDocument(doc, { preview: true });
+}
+
+async function completeCurrentMilestone(context: vscode.ExtensionContext) {
+  const session = getCurrentSession(context);
+  if (!session) {
+    vscode.window.showInformationMessage('VibeLearn: No active session. Start one first.');
+    return;
+  }
+
+  const { milestones, activeMilestoneIndex } = session;
+  if (activeMilestoneIndex >= milestones.length) {
+    vscode.window.showInformationMessage('VibeLearn: All milestones are already completed! 🎉');
+    return;
+  }
+
+  milestones[activeMilestoneIndex].completed = true;
+  const nextIndex = activeMilestoneIndex + 1;
+  session.activeMilestoneIndex = nextIndex;
+  session.updatedAt = new Date().toISOString();
+  await saveSession(context, session);
+
+  if (nextIndex >= milestones.length) {
+    vscode.window.showInformationMessage(
+      `🎉 Congratulations! You completed all milestones for "${session.projectName}"!`
+    );
+  } else {
+    const next = milestones[nextIndex];
+    vscode.window.showInformationMessage(
+      `VibeLearn: Milestone complete! Next up: "${next.title}"`
+    );
+  }
 }
 
 export function deactivate() {}

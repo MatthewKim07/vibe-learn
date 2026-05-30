@@ -50,6 +50,18 @@
       {
         "command": "vibelearn.clearLearningProfile",
         "title": "VibeLearn: Clear Learning Profile"
+      },
+      {
+        "command": "vibelearn.startLearningSession",
+        "title": "VibeLearn: Start Learning Session"
+      },
+      {
+        "command": "vibelearn.showLearningSession",
+        "title": "VibeLearn: Show Learning Session"
+      },
+      {
+        "command": "vibelearn.completeCurrentMilestone",
+        "title": "VibeLearn: Complete Current Milestone"
       }
     ],
     "menus": {

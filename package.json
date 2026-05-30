@@ -74,6 +74,10 @@
       {
         "command": "vibelearn.toggleSocraticMode",
         "title": "VibeLearn: Toggle Socratic Mode"
+      },
+      {
+        "command": "vibelearn.explainBack",
+        "title": "VibeLearn: Explain Back"
       }
     ],
     "menus": {

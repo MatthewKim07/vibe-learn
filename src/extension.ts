@@ -24,6 +24,7 @@ import {
 import { createClient } from './ai';
 import { buildRoadmapMessages } from './ai/roadmapPrompt';
 import { buildReflectionMessagesForCode, buildReflectionMessagesForSession } from './ai/reflectionPrompt';
+import { buildExplainBackMessages, buildExplainPrompt } from './ai/explainBackPrompt';
 import { AIError, HelpLevel } from './ai/types';
 import { getApiKey } from './secrets';
 
@@ -113,6 +114,12 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('vibelearn.toggleSocraticMode', () =>
       toggleSocraticMode()
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('vibelearn.explainBack', () =>
+      explainBack(context, provider)
     )
   );
 }
@@ -546,6 +553,46 @@ async function toggleSocraticMode() {
   vscode.window.showInformationMessage(
     `VibeLearn: Socratic Mode ${!current ? 'enabled' : 'disabled'}.`
   );
+}
+
+async function explainBack(
+  context: vscode.ExtensionContext,
+  chatProvider: ChatViewProvider
+) {
+  // Step 1: ask for concept
+  const concept = await vscode.window.showInputBox({
+    prompt: 'What concept do you want to explain back?',
+    placeHolder: 'e.g. async/await, React state, recursion, REST APIs',
+    ignoreFocusOut: true,
+    validateInput: (v) => (v.trim().length === 0 ? 'Please enter a concept.' : null)
+  });
+  if (!concept) return;
+
+  // Step 2 & 3: show the explain-back prompt to the user
+  const explainPrompt = buildExplainPrompt(concept.trim());
+  const userExplanation = await vscode.window.showInputBox({
+    prompt: explainPrompt,
+    placeHolder: 'Type your explanation here…',
+    ignoreFocusOut: true,
+    validateInput: (v) => (v.trim().length === 0 ? 'Please enter your explanation.' : null)
+  });
+  if (!userExplanation) return;
+
+  const cfg = vscode.workspace.getConfiguration('vibelearn');
+  const providerName = cfg.get<Provider>('provider', 'openai');
+  const model = cfg.get<string>('model', 'gpt-4o-mini');
+
+  const profile = getLearningProfile(context);
+  const profileContext = formatLearningProfileForPrompt(profile);
+
+  const messages = buildExplainBackMessages({
+    concept: concept.trim(),
+    explanation: userExplanation.trim(),
+    profileContext: profileContext || undefined
+  });
+
+  const displayText = `Explain Back: ${concept.trim()}`;
+  await chatProvider.submitFocused(messages, displayText, { model, providerName });
 }
 
 export function deactivate() {}

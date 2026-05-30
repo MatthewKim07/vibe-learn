@@ -608,23 +608,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   </div>
   <div id="actions" style="display:none">
     <div class="action-group">
-      <span class="action-label">Project</span>      <button class="action-btn" type="button" data-cmd="vibelearn.startLearningSession" title="Start a new learning session">Start Session</button>
-      <button class="action-btn" type="button" data-cmd="vibelearn.openDashboard" title="Open learning dashboard">Dashboard</button>
-      <button class="action-btn" type="button" data-cmd="vibelearn.suggestNextStep" title="Get a next step suggestion">Next Step</button>
-      <button class="action-btn" type="button" data-cmd="vibelearn.completeCurrentMilestone" title="Mark current milestone complete">✓ Milestone</button>
-    </div>
-    <div class="action-group">
-      <span class="action-label">Learn</span>
-      <button class="action-btn" type="button" data-cmd="vibelearn.reflectionCheck" title="Run a reflection check">Reflect</button>
-      <button class="action-btn" type="button" data-cmd="vibelearn.explainBack" title="Explain a concept back">Explain Back</button>
-      <button class="action-btn" type="button" data-cmd="vibelearn.createRoadmap" title="Create a project roadmap">Roadmap</button>
-    </div>
-    <div class="action-group">
-      <span class="action-label">Code</span>
-      <button class="action-btn" type="button" data-cmd="vibelearn.reviewSelection" title="Review selected code">Review Code</button>
-      <button class="action-btn" type="button" data-cmd="vibelearn.rewritePrompt" title="Rewrite a prompt for learning">Rewrite Prompt</button>
-    </div>
-    <div class="action-group">
       <span class="action-label">Settings</span>
       <button class="action-btn" type="button" data-cmd="vibelearn.toggleSocraticMode" title="Toggle Socratic Mode on or off">Socratic Mode</button>
       <button class="action-btn" type="button" data-cmd="vibelearn.showLearningProfile" title="Show your learning profile">Learning Profile</button>
@@ -711,12 +694,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       vscode.postMessage({ type: 'setHelpLevel', value: levelEl.value });
     });
 
-    function dispatchCmd(e) {
+    document.getElementById('actions').addEventListener('click', (e) => {
       const btn = e.target.closest('[data-cmd]');
       if (btn) vscode.postMessage({ type: 'command', command: btn.getAttribute('data-cmd') });
-    }
-    document.getElementById('actions').addEventListener('click', dispatchCmd);
-    document.getElementById('onboarding').addEventListener('click', dispatchCmd);
+    });
 
     document.getElementById('btn-pick-model').addEventListener('click', () => {
       vscode.postMessage({ type: 'pickModel' });

@@ -97,7 +97,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand('vibelearn.completeCurrentMilestone', () =>
-      completeCurrentMilestone(context)
+      completeCurrentMilestone(context, provider)
     )
   );
 
@@ -392,6 +392,7 @@ async function startLearningSession(
 
         // Show roadmap in sidebar and confirm session started
         await chatProvider.submitRoadmap(idea.trim());
+        await chatProvider.refreshSettings();
         vscode.window.showInformationMessage(
           `VibeLearn: Session started! ${milestones.length} milestones. First: "${milestones[0]}"`
         );
@@ -438,7 +439,7 @@ async function showLearningSession(context: vscode.ExtensionContext) {
   await vscode.window.showTextDocument(doc, { preview: true });
 }
 
-async function completeCurrentMilestone(context: vscode.ExtensionContext) {
+async function completeCurrentMilestone(context: vscode.ExtensionContext, chatProvider: ChatViewProvider) {
   const session = getCurrentSession(context);
   if (!session) {
     vscode.window.showInformationMessage('VibeLearn: No active session. Start one first.');
@@ -456,6 +457,7 @@ async function completeCurrentMilestone(context: vscode.ExtensionContext) {
   session.activeMilestoneIndex = nextIndex;
   session.updatedAt = new Date().toISOString();
   await saveSession(context, session);
+  await chatProvider.refreshSettings();
 
   if (nextIndex >= milestones.length) {
     vscode.window.showInformationMessage(

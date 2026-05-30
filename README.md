@@ -59,6 +59,7 @@ Open the Command Palette with `Cmd+Shift+P` (Mac) or `Ctrl+Shift+P` (Win/Linux) 
 | `VibeLearn: Start Learning Session` | Enter a project idea; generates a roadmap, extracts milestones, and starts a guided learning session. |
 | `VibeLearn: Show Learning Session` | Open a Markdown document showing your active session, current milestone, and progress. |
 | `VibeLearn: Complete Current Milestone` | Mark the current milestone done and advance to the next one. |
+| `VibeLearn: Suggest Next Step` | Get a focused suggestion for your current milestone: why it matters, what to try, and one hint. |
 | `VibeLearn: Show Learning Profile` | Open a Markdown document showing your tracked concepts, strengths, and struggles. |
 | `VibeLearn: Clear Learning Profile` | Wipe your local learning profile after confirmation. |
 

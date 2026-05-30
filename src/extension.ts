@@ -109,6 +109,12 @@ export function activate(context: vscode.ExtensionContext) {
       reflectionCheck(context, provider)
     )
   );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('vibelearn.toggleSocraticMode', () =>
+      toggleSocraticMode()
+    )
+  );
 }
 
 async function rewritePromptCommand() {
@@ -531,6 +537,15 @@ async function reflectionCheck(
   }
 
   await chatProvider.submitFocused(messages, displayText, { model, providerName });
+}
+
+async function toggleSocraticMode() {
+  const cfg = vscode.workspace.getConfiguration('vibelearn');
+  const current = cfg.get<boolean>('socraticMode', false);
+  await cfg.update('socraticMode', !current, vscode.ConfigurationTarget.Global);
+  vscode.window.showInformationMessage(
+    `VibeLearn: Socratic Mode ${!current ? 'enabled' : 'disabled'}.`
+  );
 }
 
 export function deactivate() {}

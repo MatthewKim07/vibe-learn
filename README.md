@@ -39,6 +39,8 @@ In VS Code:
 3. Click the mortarboard icon in the left Activity Bar.
 4. **Configure a provider** (see below) and start chatting.
 
+If you haven't configured a provider yet, the sidebar shows a **Welcome card** with "Choose Model" and "Set API Key" buttons. The action buttons and chat are hidden until setup is complete.
+
 ### Choose a provider
 
 - **OpenAI** — fastest path. Get a key from [platform.openai.com](https://platform.openai.com), add billing, then run `VibeLearn: Set API Key`.

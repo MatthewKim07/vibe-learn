@@ -23,6 +23,7 @@ import {
 } from './learningSession';
 import { createClient } from './ai';
 import { buildRoadmapMessages } from './ai/roadmapPrompt';
+import { buildReflectionMessagesForCode, buildReflectionMessagesForSession } from './ai/reflectionPrompt';
 import { AIError, HelpLevel } from './ai/types';
 import { getApiKey } from './secrets';
 
@@ -100,6 +101,12 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('vibelearn.suggestNextStep', () =>
       suggestNextStep(context, provider)
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('vibelearn.reflectionCheck', () =>
+      reflectionCheck(context, provider)
     )
   );
 }
@@ -481,6 +488,49 @@ async function suggestNextStep(
     `Suggest next step for: ${active.title}`,
     { model, providerName }
   );
+}
+
+async function reflectionCheck(
+  context: vscode.ExtensionContext,
+  chatProvider: ChatViewProvider
+) {
+  const cfg = vscode.workspace.getConfiguration('vibelearn');
+  const providerName = cfg.get<Provider>('provider', 'openai');
+  const model = cfg.get<string>('model', 'gpt-4o-mini');
+
+  const editor = vscode.window.activeTextEditor;
+  const hasSelection = editor && !editor.selection.isEmpty;
+  const session = getCurrentSession(context);
+
+  if (!hasSelection && !session) {
+    vscode.window.showInformationMessage(
+      'VibeLearn: Select some code in the editor, or start a Learning Session, to run a Reflection Check.'
+    );
+    return;
+  }
+
+  let messages: import('./ai/types').ChatMessage[];
+  let displayText: string;
+
+  if (hasSelection && editor) {
+    const code = editor.document.getText(editor.selection);
+    const language = editor.document.languageId || 'text';
+    messages = buildReflectionMessagesForCode({ code, language });
+    displayText = 'Reflection Check on selected code';
+  } else {
+    // session is guaranteed non-null here
+    const active = session!.milestones[session!.activeMilestoneIndex];
+    const profile = getLearningProfile(context);
+    const profileContext = formatLearningProfileForPrompt(profile);
+    messages = buildReflectionMessagesForSession({
+      projectName: session!.projectName,
+      currentMilestone: active ? active.title : 'All milestones completed',
+      profileContext: profileContext || undefined
+    });
+    displayText = `Reflection Check: ${session!.projectName}`;
+  }
+
+  await chatProvider.submitFocused(messages, displayText, { model, providerName });
 }
 
 export function deactivate() {}

@@ -66,6 +66,10 @@
       {
         "command": "vibelearn.suggestNextStep",
         "title": "VibeLearn: Suggest Next Step"
+      },
+      {
+        "command": "vibelearn.reflectionCheck",
+        "title": "VibeLearn: Reflection Check"
       }
     ],
     "menus": {

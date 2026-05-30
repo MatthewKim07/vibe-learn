@@ -56,6 +56,9 @@ Open the Command Palette with `Cmd+Shift+P` (Mac) or `Ctrl+Shift+P` (Win/Linux) 
 | `VibeLearn: Review Selected Code` | Select code in the editor, right-click or run from palette. Teaching-mode review in the sidebar. |
 | `VibeLearn: Rewrite Prompt for Learning` | Type a normal prompt; get a teaching-focused rewrite + clipboard copy. No AI call. |
 | `VibeLearn: Create Project Roadmap` | Enter a project idea; get a step-by-step learning roadmap with milestones and "Try first" prompts in the sidebar. |
+| `VibeLearn: Start Learning Session` | Enter a project idea; generates a roadmap, extracts milestones, and starts a guided learning session. |
+| `VibeLearn: Show Learning Session` | Open a Markdown document showing your active session, current milestone, and progress. |
+| `VibeLearn: Complete Current Milestone` | Mark the current milestone done and advance to the next one. |
 | `VibeLearn: Show Learning Profile` | Open a Markdown document showing your tracked concepts, strengths, and struggles. |
 | `VibeLearn: Clear Learning Profile` | Wipe your local learning profile after confirmation. |
 
@@ -141,6 +144,20 @@ First reply may be slow while the model loads into RAM; subsequent replies are f
 | `Ollama model "X" not found locally. Did you mean: ...?` | Pick from the suggestions, or `ollama pull X`. |
 | `Ollama request failed (500): ...` | Try a smaller prompt or a smaller model. |
 
+## Learning Sessions
+
+A Learning Session ties together a project roadmap, attempt-first guidance, and your learning profile into a single focused experience.
+
+**Start a session:** `VibeLearn: Start Learning Session` → enter a project idea → VibeLearn generates a roadmap, extracts milestones, and saves the session locally.
+
+While a session is active, every chat message includes your current milestone as context so the AI keeps guidance focused on what you're building right now.
+
+**Track progress:** `VibeLearn: Show Learning Session` opens a Markdown document with a checklist of milestones and your current position.
+
+**Advance:** `VibeLearn: Complete Current Milestone` marks the current milestone done and moves to the next. When the final milestone is completed, you get a congratulatory message.
+
+One active session at a time. Sessions are stored in VS Code `globalState` — local only, never synced.
+
 ## Learning Profile
 
 VibeLearn tracks what you encounter across chat sessions and uses it to personalise teaching.
@@ -181,6 +198,8 @@ You can clear a key any time with `VibeLearn: Clear API Key`. Ollama uses no key
 │   ├── promptRewrite.test.ts
 │   ├── learningProfile.ts       # local learning profile (globalState)
 │   ├── learningProfile.test.ts
+│   ├── learningSession.ts       # learning session / project mode (globalState)
+│   ├── learningSession.test.ts
 │   └── ai/
 │       ├── types.ts             # AIClient, AIRequest, AIError, Provider, ChatMessage
 │       ├── promptBuilder.ts     # teaching system prompt per helpLevel

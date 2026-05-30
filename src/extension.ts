@@ -84,8 +84,8 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('vibelearn.startLearningSession', () =>
-      startLearningSession(context, provider)
+    vscode.commands.registerCommand('vibelearn.startLearningSession', (idea?: string) =>
+      startLearningSession(context, provider, idea)
     )
   );
 
@@ -351,9 +351,10 @@ async function clearLearningProfileCommand(context: vscode.ExtensionContext) {
 
 async function startLearningSession(
   context: vscode.ExtensionContext,
-  chatProvider: ChatViewProvider
+  chatProvider: ChatViewProvider,
+  prefilledIdea?: string
 ) {
-  const idea = await vscode.window.showInputBox({
+  const idea = prefilledIdea ?? await vscode.window.showInputBox({
     prompt: 'What project do you want to learn by building?',
     placeHolder: 'e.g. A weather app, a CLI todo list, a personal blog',
     ignoreFocusOut: true,
@@ -389,6 +390,7 @@ async function startLearningSession(
 
         const session = createSession(idea.trim(), goal, milestones);
         await saveSession(context, session);
+        await context.globalState.update('vibelearn.hasCompletedFirstRun', true);
 
         // Show roadmap in sidebar and confirm session started
         await chatProvider.submitRoadmap(idea.trim());

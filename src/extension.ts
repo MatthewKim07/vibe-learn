@@ -26,6 +26,7 @@ import { buildRoadmapMessages } from './ai/roadmapPrompt';
 import { buildReflectionMessagesForCode, buildReflectionMessagesForSession } from './ai/reflectionPrompt';
 import { buildExplainBackMessages, buildExplainPrompt } from './ai/explainBackPrompt';
 import { formatWorkspaceContextForPrompt, getWorkspaceContext } from './workspaceContext';
+import { buildDashboardMarkdown } from './dashboard';
 import { AIError, HelpLevel } from './ai/types';
 import { getApiKey } from './secrets';
 
@@ -127,6 +128,12 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('vibelearn.showWorkspaceContext', () =>
       showWorkspaceContext()
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('vibelearn.openDashboard', () =>
+      openDashboard(context)
     )
   );
 }
@@ -607,6 +614,23 @@ async function showWorkspaceContext() {
   const content = ctx
     ? formatWorkspaceContextForPrompt(ctx) || '_(No files or folders found in workspace root.)_'
     : '_(No workspace is open.)_';
+
+  const doc = await vscode.workspace.openTextDocument({ language: 'markdown', content });
+  await vscode.window.showTextDocument(doc, { preview: true });
+}
+
+async function openDashboard(context: vscode.ExtensionContext) {
+  const cfg = vscode.workspace.getConfiguration('vibelearn');
+  const session = getCurrentSession(context);
+  const profile = getLearningProfile(context);
+
+  const content = buildDashboardMarkdown({
+    session: session ?? undefined,
+    profile,
+    helpLevel: cfg.get<string>('helpLevel', 'guided'),
+    socraticMode: cfg.get<boolean>('socraticMode', false),
+    attemptFirst: cfg.get<boolean>('attemptFirst', true)
+  });
 
   const doc = await vscode.workspace.openTextDocument({ language: 'markdown', content });
   await vscode.window.showTextDocument(doc, { preview: true });

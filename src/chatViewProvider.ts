@@ -62,6 +62,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         await vscode.commands.executeCommand('vibelearn.pickModel');
       } else if (msg?.type === 'setApiKey') {
         await vscode.commands.executeCommand('vibelearn.setApiKey');
+      } else if (msg?.type === 'command' && typeof msg.command === 'string') {
+        await vscode.commands.executeCommand(msg.command);
       }
     });
 
@@ -354,6 +356,27 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       text-decoration: none;
     }
     .meta button.linkbtn:hover { text-decoration: underline; }
+    #actions {
+      padding: 6px 10px;
+      border-bottom: 1px solid rgba(200, 182, 226, 0.08);
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .action-group { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+    .action-label {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.4px;
+      color: var(--vscode-descriptionForeground);
+      text-transform: uppercase;
+      min-width: 72px;
+    }
+    .action-btn {
+      background: var(--vscode-editorWidget-background);
+      color: var(--vscode-foreground);
+      border: 1px solid var(--vscode-panel-border);
+      border-radius: 4px;
+      padding: 3px 8px;
+      font-size: 11px; font-family: inherit; cursor: pointer;
+    }
+    .action-btn:hover { background: var(--vscode-list-hoverBackground); }
     #messages {
       flex: 1; overflow-y: auto;
       padding: 12px;
@@ -531,6 +554,26 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     <button class="linkbtn" id="btn-set-key" type="button">set API key</button>
     <button class="linkbtn" id="btn-clear" type="button">clear chat</button>
   </div>
+  <div id="actions">
+    <div class="action-group">
+      <span class="action-label">Project</span>
+      <button class="action-btn" type="button" data-cmd="vibelearn.startLearningSession" title="Start a new learning session">Start Session</button>
+      <button class="action-btn" type="button" data-cmd="vibelearn.openDashboard" title="Open learning dashboard">Dashboard</button>
+      <button class="action-btn" type="button" data-cmd="vibelearn.suggestNextStep" title="Get a next step suggestion">Next Step</button>
+      <button class="action-btn" type="button" data-cmd="vibelearn.completeCurrentMilestone" title="Mark current milestone complete">✓ Milestone</button>
+    </div>
+    <div class="action-group">
+      <span class="action-label">Learn</span>
+      <button class="action-btn" type="button" data-cmd="vibelearn.reflectionCheck" title="Run a reflection check">Reflect</button>
+      <button class="action-btn" type="button" data-cmd="vibelearn.explainBack" title="Explain a concept back">Explain Back</button>
+      <button class="action-btn" type="button" data-cmd="vibelearn.createRoadmap" title="Create a project roadmap">Roadmap</button>
+    </div>
+    <div class="action-group">
+      <span class="action-label">Code</span>
+      <button class="action-btn" type="button" data-cmd="vibelearn.reviewSelection" title="Review selected code">Review Code</button>
+      <button class="action-btn" type="button" data-cmd="vibelearn.rewritePrompt" title="Rewrite a prompt for learning">Rewrite Prompt</button>
+    </div>
+  </div>
   <div id="messages">
     <div class="welcome" id="welcome">
       <h2>👋 Welcome to <span class="brand"><span class="c1">V</span><span class="c2">i</span><span class="c3">b</span><span class="c4">e</span><span class="c5">L</span><span class="c6">e</span><span class="c7">a</span><span class="c8">r</span><span class="c9">n</span></span></h2>
@@ -607,6 +650,11 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
     levelEl.addEventListener('change', () => {
       vscode.postMessage({ type: 'setHelpLevel', value: levelEl.value });
+    });
+
+    document.getElementById('actions').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-cmd]');
+      if (btn) vscode.postMessage({ type: 'command', command: btn.getAttribute('data-cmd') });
     });
 
     document.getElementById('btn-pick-model').addEventListener('click', () => {

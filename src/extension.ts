@@ -25,6 +25,7 @@ import { createClient } from './ai';
 import { buildRoadmapMessages } from './ai/roadmapPrompt';
 import { buildReflectionMessagesForCode, buildReflectionMessagesForSession } from './ai/reflectionPrompt';
 import { buildExplainBackMessages, buildExplainPrompt } from './ai/explainBackPrompt';
+import { formatWorkspaceContextForPrompt, getWorkspaceContext } from './workspaceContext';
 import { AIError, HelpLevel } from './ai/types';
 import { getApiKey } from './secrets';
 
@@ -120,6 +121,12 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand('vibelearn.explainBack', () =>
       explainBack(context, provider)
+    )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('vibelearn.showWorkspaceContext', () =>
+      showWorkspaceContext()
     )
   );
 }
@@ -593,6 +600,16 @@ async function explainBack(
 
   const displayText = `Explain Back: ${concept.trim()}`;
   await chatProvider.submitFocused(messages, displayText, { model, providerName });
+}
+
+async function showWorkspaceContext() {
+  const ctx = await getWorkspaceContext();
+  const content = ctx
+    ? formatWorkspaceContextForPrompt(ctx) || '_(No files or folders found in workspace root.)_'
+    : '_(No workspace is open.)_';
+
+  const doc = await vscode.workspace.openTextDocument({ language: 'markdown', content });
+  await vscode.window.showTextDocument(doc, { preview: true });
 }
 
 export function deactivate() {}

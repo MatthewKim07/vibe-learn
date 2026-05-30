@@ -78,6 +78,10 @@
       {
         "command": "vibelearn.explainBack",
         "title": "VibeLearn: Explain Back"
+      },
+      {
+        "command": "vibelearn.showWorkspaceContext",
+        "title": "VibeLearn: Show Workspace Context"
       }
     ],
     "menus": {
@@ -149,6 +153,11 @@
           "type": "boolean",
           "default": false,
           "description": "Prefer teaching through guided questions rather than direct answers."
+        },
+        "vibelearn.includeWorkspaceContext": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include lightweight workspace structure (top-level files and folders) in teaching prompts."
         }
       }
     }

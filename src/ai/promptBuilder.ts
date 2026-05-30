@@ -163,6 +163,7 @@ export interface BuildMessagesArgs {
   profileContext?: string;
   sessionContext?: string;
   socraticMode?: boolean;
+  workspaceContext?: string;
 }
 
 export function buildMessages({
@@ -172,7 +173,8 @@ export function buildMessages({
   userHasAttempt = false,
   profileContext = '',
   sessionContext = '',
-  socraticMode = false
+  socraticMode = false,
+  workspaceContext = ''
 }: BuildMessagesArgs): ChatMessage[] {
   let systemContent = buildSystemPrompt(level, attemptFirst, userHasAttempt, socraticMode);
   if (profileContext) {
@@ -180,6 +182,9 @@ export function buildMessages({
   }
   if (sessionContext) {
     systemContent += '\n\n' + sessionContext;
+  }
+  if (workspaceContext) {
+    systemContent += '\n\n' + workspaceContext;
   }
   return [
     { role: 'system', content: systemContent },

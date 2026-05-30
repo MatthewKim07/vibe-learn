@@ -199,3 +199,23 @@ describe('buildSystemPrompt — Socratic Mode', () => {
     assert.match(p, /Attempt-First/);
   });
 });
+
+describe('buildMessages — workspaceContext', () => {
+  const history: ChatMessage[] = [{ role: 'user', content: 'hi' }];
+
+  it('includes workspaceContext in system prompt when provided', () => {
+    const out = buildMessages({ level: 'guided', history, workspaceContext: '## Workspace Context\nWorkspace: my-app' });
+    assert.match(out[0].content, /Workspace Context/);
+    assert.match(out[0].content, /my-app/);
+  });
+
+  it('omits workspaceContext when empty string', () => {
+    const out = buildMessages({ level: 'guided', history, workspaceContext: '' });
+    assert.ok(!out[0].content.includes('Workspace Context'));
+  });
+
+  it('omits workspaceContext when not provided', () => {
+    const out = buildMessages({ level: 'guided', history });
+    assert.ok(!out[0].content.includes('Workspace Context'));
+  });
+});

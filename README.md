@@ -13,6 +13,7 @@ You pick how much help you want — from **strict** (questions only) to **full**
 ## Features
 
 - **Sidebar chat** with a mortarboard icon in the Activity Bar. Built-in welcome, suggested starter prompts, animated "thinking…" indicator, error bubbles, clear-chat button.
+- **Sidebar action buttons** — Project, Learn, and Code action groups let you trigger key commands (Start Session, Dashboard, Reflect, Explain Back, Review Code, etc.) directly from the sidebar without opening the Command Palette.
 - **Help-level selector** in the sidebar header — switch tutoring intensity any time.
 - **Multiple providers** behind a clean interface: OpenAI ✓, Ollama ✓ (local, free), Anthropic / Gemini / OpenRouter (placeholders).
 - **Fuzzy Ollama model resolution** — `Llama 3.2`, `llama 3.2`, `LLAMA3.2`, even `llma3.2` all resolve to `llama3.2:latest`.

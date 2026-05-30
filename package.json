@@ -66,10 +66,6 @@
       {
         "command": "vibelearn.suggestNextStep",
         "title": "VibeLearn: Suggest Next Step"
-      },
-      {
-        "command": "vibelearn.reflectionCheck",
-        "title": "VibeLearn: Reflection Check"
       }
     ],
     "menus": {
@@ -136,6 +132,11 @@
           "type": "boolean",
           "default": true,
           "description": "Ask the user to explain or try an approach before providing code-focused help."
+        },
+        "vibelearn.socraticMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Prefer teaching through guided questions rather than direct answers."
         }
       }
     }

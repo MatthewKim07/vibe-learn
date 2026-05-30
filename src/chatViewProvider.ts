@@ -170,6 +170,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       .update('helpLevel', value, vscode.ConfigurationTarget.Global);
   }
 
+  public async refreshSettings() {
+    await this.postSettings();
+  }
+
   private async postSettings() {
     if (!this.webviewView) return;
     const cfg = vscode.workspace.getConfiguration('vibelearn');

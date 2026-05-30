@@ -44,7 +44,7 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand('vibelearn.setApiKey', () => setApiKey(context))
+    vscode.commands.registerCommand('vibelearn.setApiKey', () => setApiKey(context, provider))
   );
 
   context.subscriptions.push(
@@ -257,7 +257,7 @@ function buildReviewPrompt(code: string, language: string): string {
   ].join('\n');
 }
 
-async function setApiKey(context: vscode.ExtensionContext) {
+async function setApiKey(context: vscode.ExtensionContext, chatProvider: ChatViewProvider) {
   const cfg = vscode.workspace.getConfiguration('vibelearn');
   const defaultProvider = cfg.get<Provider>('provider', 'openai');
 
@@ -276,6 +276,7 @@ async function setApiKey(context: vscode.ExtensionContext) {
 
   await storeApiKey(context.secrets, chosen, key.trim());
   vscode.window.showInformationMessage(`VibeLearn: ${chosen} API key saved.`);
+  await chatProvider.refreshSettings();
 }
 
 async function clearApiKey(context: vscode.ExtensionContext) {

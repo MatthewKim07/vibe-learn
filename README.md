@@ -60,6 +60,7 @@ Open the Command Palette with `Cmd+Shift+P` (Mac) or `Ctrl+Shift+P` (Win/Linux) 
 | `VibeLearn: Show Learning Session` | Open a Markdown document showing your active session, current milestone, and progress. |
 | `VibeLearn: Complete Current Milestone` | Mark the current milestone done and advance to the next one. |
 | `VibeLearn: Suggest Next Step` | Get a focused suggestion for your current milestone: why it matters, what to try, and one hint. |
+| `VibeLearn: Reflection Check` | Generate 3 reflection questions based on selected code or your active learning session. |
 | `VibeLearn: Show Learning Profile` | Open a Markdown document showing your tracked concepts, strengths, and struggles. |
 | `VibeLearn: Clear Learning Profile` | Wipe your local learning profile after confirmation. |
 
@@ -209,6 +210,8 @@ You can clear a key any time with `VibeLearn: Clear API Key`. Ollama uses no key
 │       ├── roadmapPrompt.test.ts
 │       ├── attemptDetector.ts   # heuristic: has the user shown an attempt?
 │       ├── attemptDetector.test.ts
+│       ├── reflectionPrompt.ts  # reflection question builder
+│       ├── reflectionPrompt.test.ts
 │       ├── modelMatch.ts        # fuzzy Ollama model resolution
 │       ├── modelMatch.test.ts
 │       ├── notImplementedClient.ts

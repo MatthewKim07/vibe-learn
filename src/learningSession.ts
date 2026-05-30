@@ -46,7 +46,15 @@ export function formatSessionForPrompt(session: LearningSession): string {
     lines.push(`Completed Milestones: ${completed.map((m) => m.title).join(', ')}`);
   }
 
-  lines.push('\nUse this context to keep guidance focused on the learner\'s current project and milestone.');
+  lines.push(
+    '',
+    '## Teaching Guidance',
+    'Use the current milestone as the primary focus.',
+    'Prefer helping the learner make progress on the current milestone before introducing future concepts.',
+    'Do not overwhelm the learner with information from later milestones unless explicitly requested.',
+    'Connect explanations to the current project whenever possible.'
+  );
+
   return lines.join('\n');
 }
 

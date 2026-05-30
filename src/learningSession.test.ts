@@ -92,9 +92,17 @@ describe('formatSessionForPrompt', () => {
     assert.match(out, /All milestones completed/);
   });
 
-  it('includes the personalisation instruction', () => {
+  it('includes Teaching Guidance section', () => {
     const s = createSession('App', 'Goal', ['M1']);
-    assert.match(formatSessionForPrompt(s), /current project/i);
+    const out = formatSessionForPrompt(s);
+    assert.match(out, /Teaching Guidance/);
+  });
+
+  it('Teaching Guidance tells model to focus on current milestone', () => {
+    const s = createSession('App', 'Goal', ['M1']);
+    const out = formatSessionForPrompt(s);
+    assert.match(out, /current milestone/i);
+    assert.match(out, /current project/i);
   });
 });
 

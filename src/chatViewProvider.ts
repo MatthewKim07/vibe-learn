@@ -573,6 +573,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       <button class="action-btn" type="button" data-cmd="vibelearn.reviewSelection" title="Review selected code">Review Code</button>
       <button class="action-btn" type="button" data-cmd="vibelearn.rewritePrompt" title="Rewrite a prompt for learning">Rewrite Prompt</button>
     </div>
+    <div class="action-group">
+      <span class="action-label">Settings</span>
+      <button class="action-btn" type="button" data-cmd="vibelearn.toggleSocraticMode" title="Toggle Socratic Mode on or off">Socratic Mode</button>
+      <button class="action-btn" type="button" data-cmd="vibelearn.showLearningProfile" title="Show your learning profile">Learning Profile</button>
+      <button class="action-btn" type="button" data-cmd="vibelearn.showWorkspaceContext" title="Show workspace context">Workspace Context</button>
+    </div>
   </div>
   <div id="messages">
     <div class="welcome" id="welcome">

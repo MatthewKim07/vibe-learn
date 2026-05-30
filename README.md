@@ -55,6 +55,7 @@ Open the Command Palette with `Cmd+Shift+P` (Mac) or `Ctrl+Shift+P` (Win/Linux) 
 | `VibeLearn: Clear API Key` | Remove a stored key for a provider. |
 | `VibeLearn: Review Selected Code` | Select code in the editor, right-click or run from palette. Teaching-mode review in the sidebar. |
 | `VibeLearn: Rewrite Prompt for Learning` | Type a normal prompt; get a teaching-focused rewrite + clipboard copy. No AI call. |
+| `VibeLearn: Create Project Roadmap` | Enter a project idea; get a step-by-step learning roadmap with milestones and "Try first" prompts in the sidebar. |
 
 ## Settings
 
@@ -165,6 +166,10 @@ You can clear a key any time with `VibeLearn: Clear API Key`. Ollama uses no key
 │       ├── types.ts             # AIClient, AIRequest, AIError, Provider, ChatMessage
 │       ├── promptBuilder.ts     # teaching system prompt per helpLevel
 │       ├── promptBuilder.test.ts
+│       ├── roadmapPrompt.ts     # roadmap message builder
+│       ├── roadmapPrompt.test.ts
+│       ├── attemptDetector.ts   # heuristic: has the user shown an attempt?
+│       ├── attemptDetector.test.ts
 │       ├── modelMatch.ts        # fuzzy Ollama model resolution
 │       ├── modelMatch.test.ts
 │       ├── notImplementedClient.ts

@@ -48,6 +48,44 @@ describe('buildSystemPrompt', () => {
   });
 });
 
+describe('buildSystemPrompt — attempt-first', () => {
+  it('does NOT add attempt-first section when attemptFirst is false', () => {
+    for (const level of LEVELS) {
+      const p = buildSystemPrompt(level, false, false);
+      assert.ok(!p.includes('Attempt-First'), `${level}: unexpected Attempt-First section`);
+    }
+  });
+
+  it('adds attempt-first section when attemptFirst=true and no attempt detected', () => {
+    for (const level of LEVELS) {
+      const p = buildSystemPrompt(level, true, false);
+      assert.match(p, /Attempt-First/, `${level}: missing Attempt-First section`);
+    }
+  });
+
+  it('does NOT add attempt-first section when user has already shown an attempt', () => {
+    for (const level of LEVELS) {
+      const p = buildSystemPrompt(level, true, true);
+      assert.ok(!p.includes('Attempt-First'), `${level}: should not add section when attempt present`);
+    }
+  });
+
+  it('strict attempt-first tells model not to provide code', () => {
+    const p = buildSystemPrompt('strict', true, false);
+    assert.match(p, /do not provide code|not provide code|NOT provide code/i);
+  });
+
+  it('guided attempt-first holds back code until user responds', () => {
+    const p = buildSystemPrompt('guided', true, false);
+    assert.match(p, /hold back|without|until/i);
+  });
+
+  it('full attempt-first still allows full answer if explicitly asked', () => {
+    const p = buildSystemPrompt('full', true, false);
+    assert.match(p, /explicitly ask/i);
+  });
+});
+
 describe('buildMessages', () => {
   it('prepends the system prompt to history', () => {
     const history: ChatMessage[] = [
@@ -83,5 +121,15 @@ describe('buildMessages', () => {
       out.slice(1).map((m) => m.role),
       ['user', 'assistant', 'user']
     );
+  });
+
+  it('passes attemptFirst and userHasAttempt through to the system prompt', () => {
+    const history: ChatMessage[] = [{ role: 'user', content: 'how do I sort?' }];
+
+    const withAttemptFirst = buildMessages({ level: 'strict', history, attemptFirst: true, userHasAttempt: false });
+    assert.match(withAttemptFirst[0].content, /Attempt-First/);
+
+    const withoutAttemptFirst = buildMessages({ level: 'strict', history, attemptFirst: false });
+    assert.ok(!withoutAttemptFirst[0].content.includes('Attempt-First'));
   });
 });

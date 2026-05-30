@@ -99,6 +99,11 @@
             "Full: behaves like a normal assistant, gives complete answers."
           ],
           "description": "How much the assistant teaches vs. answers directly."
+        },
+        "vibelearn.attemptFirst": {
+          "type": "boolean",
+          "default": true,
+          "description": "Ask the user to explain or try an approach before providing code-focused help."
         }
       }
     }
@@ -107,7 +112,7 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "test": "tsc -p ./ && node --test out/ai/promptBuilder.test.js out/ai/factory.test.js out/ai/modelMatch.test.js out/promptRewrite.test.js"
+    "test": "tsc -p ./ && node --test out/ai/promptBuilder.test.js out/ai/factory.test.js out/ai/modelMatch.test.js out/ai/attemptDetector.test.js out/promptRewrite.test.js"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { createClient } from './ai';
 import { buildMessages } from './ai/promptBuilder';
+import { hasAttempt } from './ai/attemptDetector';
 import { AIError, ChatMessage, HelpLevel, Provider } from './ai/types';
 import { getApiKey } from './secrets';
 
@@ -98,6 +99,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     const provider = cfg.get<Provider>('provider', 'openai');
     const model = cfg.get<string>('model', 'gpt-4o-mini');
     const helpLevel = cfg.get<HelpLevel>('helpLevel', 'guided');
+    const attemptFirst = cfg.get<boolean>('attemptFirst', true);
 
     this.history.push({ role: 'user', content: text });
     this.postBusy(true);
@@ -106,7 +108,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       const apiKey = await getApiKey(this.context.secrets, provider);
       const client = createClient({ provider, apiKey });
 
-      const messages = buildMessages({ level: helpLevel, history: this.history });
+      const messages = buildMessages({
+        level: helpLevel,
+        history: this.history,
+        attemptFirst,
+        userHasAttempt: hasAttempt(text)
+      });
 
       const reply = await client.complete({ model, messages });
       this.history.push({ role: 'assistant', content: reply });

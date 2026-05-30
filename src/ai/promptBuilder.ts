@@ -1,5 +1,29 @@
 import { ChatMessage, HelpLevel } from './types';
 
+// Attempt-first addendum injected into the system prompt when enabled.
+const ATTEMPT_FIRST_NO_ATTEMPT: Record<HelpLevel, string> = {
+  strict: `## Attempt-First (STRICT)
+
+The user has NOT shown an attempt yet. Do NOT provide code or a direct solution.
+Ask them what they have tried or what their approach is before going further.
+One short question is enough. Wait for their response.`,
+
+  guided: `## Attempt-First (GUIDED)
+
+The user has NOT shown an attempt yet. Ask for their approach or what they have tried before giving hints or code.
+You may give a single conceptual nudge (one sentence), but hold back any code or pseudocode until they respond.`,
+
+  assist: `## Attempt-First (ASSIST)
+
+The user has NOT shown an attempt yet. Encourage them to share their approach or a first draft.
+You may give a brief conceptual hint, but avoid partial or full code until they show something.`,
+
+  full: `## Attempt-First (FULL)
+
+The user has NOT shown an attempt yet. Before giving a full solution, briefly ask what they have tried or what direction they are thinking.
+You may still give a complete answer if they explicitly ask for it.`
+};
+
 const IDENTITY = `You are VibeLearn, a learning-first AI coding teacher embedded in VS Code.
 
 Your job is NOT to write the user's program for them. Your job is to help them learn how to write it themselves. Treat every conversation as a tutoring session, not a code-generation session.`;
@@ -80,24 +104,33 @@ const OUTPUT_RULES = `## Output Rules
 - Be concise. Prefer 3–6 sentences over an essay.
 - End with one of: a follow-up question, a "try this and tell me what happens" prompt, or — if the user is unblocked — a brief recap of the concept.`;
 
-export function buildSystemPrompt(level: HelpLevel): string {
-  return [
-    IDENTITY,
-    CORE_BEHAVIOR,
-    ANTI_PATTERNS,
-    LEVEL_BEHAVIOR[level],
-    OUTPUT_RULES
-  ].join('\n\n');
+export function buildSystemPrompt(
+  level: HelpLevel,
+  attemptFirst = false,
+  userHasAttempt = false
+): string {
+  const sections = [IDENTITY, CORE_BEHAVIOR, ANTI_PATTERNS, LEVEL_BEHAVIOR[level], OUTPUT_RULES];
+  if (attemptFirst && !userHasAttempt) {
+    sections.push(ATTEMPT_FIRST_NO_ATTEMPT[level]);
+  }
+  return sections.join('\n\n');
 }
 
 export interface BuildMessagesArgs {
   level: HelpLevel;
   history: ChatMessage[];
+  attemptFirst?: boolean;
+  userHasAttempt?: boolean;
 }
 
-export function buildMessages({ level, history }: BuildMessagesArgs): ChatMessage[] {
+export function buildMessages({
+  level,
+  history,
+  attemptFirst = false,
+  userHasAttempt = false
+}: BuildMessagesArgs): ChatMessage[] {
   return [
-    { role: 'system', content: buildSystemPrompt(level) },
+    { role: 'system', content: buildSystemPrompt(level, attemptFirst, userHasAttempt) },
     ...history.filter((m) => m.role !== 'system')
   ];
 }

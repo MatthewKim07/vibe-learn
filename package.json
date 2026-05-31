@@ -40,52 +40,8 @@
         "title": "VibeLearn: Pick Model"
       },
       {
-        "command": "vibelearn.createRoadmap",
-        "title": "VibeLearn: Create Project Roadmap"
-      },
-      {
-        "command": "vibelearn.showLearningProfile",
-        "title": "VibeLearn: Show Learning Profile"
-      },
-      {
-        "command": "vibelearn.clearLearningProfile",
-        "title": "VibeLearn: Clear Learning Profile"
-      },
-      {
-        "command": "vibelearn.startLearningSession",
-        "title": "VibeLearn: Start Learning Session"
-      },
-      {
-        "command": "vibelearn.showLearningSession",
-        "title": "VibeLearn: Show Learning Session"
-      },
-      {
-        "command": "vibelearn.completeCurrentMilestone",
-        "title": "VibeLearn: Complete Current Milestone"
-      },
-      {
-        "command": "vibelearn.suggestNextStep",
-        "title": "VibeLearn: Suggest Next Step"
-      },
-      {
-        "command": "vibelearn.reflectionCheck",
-        "title": "VibeLearn: Reflection Check"
-      },
-      {
-        "command": "vibelearn.toggleSocraticMode",
-        "title": "VibeLearn: Toggle Socratic Mode"
-      },
-      {
-        "command": "vibelearn.explainBack",
-        "title": "VibeLearn: Explain Back"
-      },
-      {
-        "command": "vibelearn.showWorkspaceContext",
-        "title": "VibeLearn: Show Workspace Context"
-      },
-      {
-        "command": "vibelearn.openDashboard",
-        "title": "VibeLearn: Open Learning Dashboard"
+        "command": "vibelearn.pickProvider",
+        "title": "VibeLearn: Change Provider"
       }
     ],
     "menus": {

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { ChatViewProvider } from './chatViewProvider';
 import { pickModel } from './modelPicker';
+import { pickProviderCommand } from './modelPicker';
 import { rewritePrompt } from './promptRewrite';
 import {
   Provider,
@@ -63,6 +64,10 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand('vibelearn.pickModel', pickModel)
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('vibelearn.pickProvider', pickProviderCommand)
   );
 
   context.subscriptions.push(
@@ -136,6 +141,7 @@ export function activate(context: vscode.ExtensionContext) {
       openDashboard(context)
     )
   );
+
 }
 
 async function rewritePromptCommand() {

@@ -79,3 +79,28 @@ async function buildItems(provider: Provider): Promise<vscode.QuickPickItem[]> {
   }
   return CURATED[provider].map((m) => ({ label: m.label, description: m.description }));
 }
+
+export async function pickProviderCommand(): Promise<void> {
+  const cfg = vscode.workspace.getConfiguration('vibelearn');
+  const current = cfg.get<Provider>('provider', 'openai');
+
+  const items: vscode.QuickPickItem[] = [
+    { label: 'openai',    description: 'OpenAI (GPT models) — requires API key' },
+    { label: 'ollama',    description: 'Ollama — free, local, no key needed' },
+    { label: 'anthropic', description: 'Anthropic (Claude) — requires API key' },
+    { label: 'gemini',    description: 'Google Gemini — requires API key' },
+    { label: 'openrouter',description: 'OpenRouter — requires API key' },
+  ];
+
+  const picked = await vscode.window.showQuickPick(items, {
+    placeHolder: `Current provider: ${current}. Choose a new one.`,
+    ignoreFocusOut: true
+  });
+  if (!picked) return;
+
+  await cfg.update('provider', picked.label, vscode.ConfigurationTarget.Global);
+  vscode.window.showInformationMessage(`VibeLearn: provider set to "${picked.label}".`);
+
+  // Immediately offer to pick a model for the new provider
+  await pickModel();
+}

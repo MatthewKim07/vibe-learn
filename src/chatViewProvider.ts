@@ -4,7 +4,7 @@ import { buildMessages } from './ai/promptBuilder';
 import { buildRoadmapMessages } from './ai/roadmapPrompt';
 import { hasAttempt } from './ai/attemptDetector';
 import { AIError, ChatMessage, HelpLevel, Provider } from './ai/types';
-import { getApiKey } from './secrets';
+import { getApiKey, storeApiKey } from './secrets';
 import {
   extractProfileUpdate,
   formatLearningProfileForPrompt,
@@ -41,6 +41,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.html = this.getHtml(webviewView.webview);
 
     webviewView.webview.onDidReceiveMessage(async (msg) => {
+      try {
       if (msg?.type === 'userMessage' && typeof msg.text === 'string') {
         await this.handleUserMessage(msg.text);
       } else if (msg?.type === 'webviewReady') {
@@ -67,8 +68,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         await vscode.commands.executeCommand('vibelearn.startLearningSession', msg.idea);
       } else if (msg?.type === 'setHelpLevel' && typeof msg.value === 'string') {
         await this.applyHelpLevel(msg.value);
-      } else if (msg?.type === 'clearChat') {
-        this.history = [];
       } else if (msg?.type === 'openSettings') {
         await vscode.commands.executeCommand(
           'workbench.action.openSettings',
@@ -76,12 +75,40 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         );
       } else if (msg?.type === 'pickModel') {
         await vscode.commands.executeCommand('vibelearn.pickModel');
+      } else if (msg?.type === 'pickProvider') {
+        await vscode.commands.executeCommand('vibelearn.pickProvider');
       } else if (msg?.type === 'setApiKey') {
         await vscode.commands.executeCommand('vibelearn.setApiKey');
+      } else if (msg?.type === 'saveApiKey' && typeof msg.key === 'string' && typeof msg.provider === 'string') {
+        await storeApiKey(this.context.secrets, msg.provider as import('./ai/types').Provider, msg.key);
+        vscode.window.showInformationMessage(`VibeLearn: ${msg.provider} API key saved.`);
+        await this.refreshSettings();
       } else if (msg?.type === 'command' && typeof msg.command === 'string') {
         await vscode.commands.executeCommand(msg.command);
+      } else if (msg?.type === 'toggleSetting' && typeof msg.key === 'string') {
+        const cfg = vscode.workspace.getConfiguration('vibelearn');
+        const current = cfg.get<boolean>(msg.key, false);
+        await cfg.update(msg.key, !current, vscode.ConfigurationTarget.Global);
+      } else if (msg?.type === 'setProvider' && typeof msg.provider === 'string') {
+        const cfg = vscode.workspace.getConfiguration('vibelearn');
+        await cfg.update('provider', msg.provider, vscode.ConfigurationTarget.Global);
+        const defaultModels: Record<string, string> = {
+          openai: 'gpt-4o-mini', ollama: 'llama3.2', anthropic: 'claude-haiku-4-5',
+          gemini: 'gemini-1.5-flash', openrouter: 'openrouter/auto'
+        };
+        await cfg.update('model', defaultModels[msg.provider] ?? '', vscode.ConfigurationTarget.Global);
+        await this.context.globalState.update('vibelearn.hasCompletedFirstRun', true);
+        await this.refreshSettings();
+      } else if (msg?.type === 'setModel' && typeof msg.model === 'string') {
+        const cfg = vscode.workspace.getConfiguration('vibelearn');
+        await cfg.update('model', msg.model, vscode.ConfigurationTarget.Global);
+        vscode.window.showInformationMessage(`VibeLearn: model set to "${msg.model}".`);
+      }
+      } catch (err) {
+        console.error('[VibeLearn] onDidReceiveMessage error:', err);
       }
     });
+
 
     this.configWatcher?.dispose();
     this.configWatcher = vscode.workspace.onDidChangeConfiguration((e) => {
@@ -185,6 +212,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       .update('helpLevel', value, vscode.ConfigurationTarget.Global);
   }
 
+  public toggleSettings() {
+    this.webviewView?.webview.postMessage({ type: 'toggleSettings' });
+  }
+
   public async refreshSettings() {
     await this.postSettings();
     // If the user just completed onboarding and hasn't seen the welcome yet, show it now
@@ -204,13 +235,19 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     const cfg = vscode.workspace.getConfiguration('vibelearn');
     const provider = cfg.get<Provider>('provider', 'openai');
     const state = await getOnboardingState(this.context.secrets, provider);
+    const session = getCurrentSession(this.context);
+    const done = session ? session.milestones.filter((m) => m.completed).length : 0;
     this.webviewView.webview.postMessage({
       type: 'settings',
       provider,
       model: cfg.get<string>('model', ''),
       helpLevel: cfg.get<HelpLevel>('helpLevel', 'guided'),
       socraticMode: cfg.get<boolean>('socraticMode', false),
-      configured: isConfigured(state)
+      attemptFirst: cfg.get<boolean>('attemptFirst', true),
+      includeWorkspaceContext: cfg.get<boolean>('includeWorkspaceContext', true),
+      configured: isConfigured(state),
+      sessionName: session?.projectName ?? null,
+      sessionProgress: session ? `${done} / ${session.milestones.length}` : null
     });
   }
 
@@ -322,86 +359,32 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       margin: 0; padding: 0;
       font-family: var(--vscode-font-family);
       font-size: var(--vscode-font-size);
-      color: #e8e6f0;
-      background:
-        radial-gradient(120% 60% at 50% -10%, rgba(200, 182, 226, 0.04) 0%, transparent 60%),
-        radial-gradient(120% 60% at 50% 110%, rgba(169, 197, 229, 0.04) 0%, transparent 60%),
-        #060608;
+      color: var(--vscode-foreground);
+      background: var(--vscode-sideBar-background, #1e1e1e);
       display: flex; flex-direction: column;
       height: 100vh;
-      position: relative;
       overflow: hidden;
     }
-    .ornament {
-      position: fixed; left: 0; right: 0;
-      width: 100%; height: 56px;
-      pointer-events: none;
-      z-index: 0; opacity: 0.10;
-      color: #c8b6e2;
+    #btn-gear {
+      background: none; border: none; cursor: pointer; padding: 2px 5px;
+      color: var(--vscode-foreground); font-size: 14px; opacity: 0.6; border-radius: 3px;
     }
-    .ornament.top { top: 0; }
-    .ornament.bottom { bottom: 0; transform: scaleY(-1); }
-    header, .meta, #messages, form {
-      position: relative; z-index: 1;
+    #btn-gear:hover { opacity: 1; background: var(--vscode-toolbar-hoverBackground); }
+    #bottom-bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 4px 10px 6px;
+      border-top: 1px solid var(--vscode-panel-border);
+      font-size: 11px; color: var(--vscode-descriptionForeground);
+      flex-shrink: 0;
     }
-    header {
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 8px; padding: 10px 12px;
-      border-bottom: 1px solid rgba(200, 182, 226, 0.10);
-      background: rgba(200, 182, 226, 0.02);
-    }
-    .title {
-      font-weight: 700; font-size: 13px;
-      letter-spacing: 0.3px;
-      display: inline-flex; align-items: center;
-    }
-    .title .dot {
-      display: inline-block; width: 6px; height: 6px; border-radius: 50%;
-      background: var(--vscode-charts-green, #4ec9b0);
-      margin-right: 6px;
-    }
-    .brand {
-      font-weight: 600;
-      letter-spacing: 0.3px;
-    }
-    .brand .c1 { color: #f5a9a9; }
-    .brand .c2 { color: #f5c9a9; }
-    .brand .c3 { color: #f5e9a9; }
-    .brand .c4 { color: #b9e5b8; }
-    .brand .c5 { color: #a9e5d9; }
-    .brand .c6 { color: #a9c5e5; }
-    .brand .c7 { color: #b8a9e5; }
-    .brand .c8 { color: #e5a9d9; }
-    .brand .c9 { color: #d9a9c5; }
-    .level-row {
-      display: flex; align-items: center; gap: 6px;
-      font-size: 11px;
-      color: var(--vscode-descriptionForeground);
-    }
-    .level-row select {
+    #bottom-bar select {
       background: var(--vscode-dropdown-background);
       color: var(--vscode-dropdown-foreground);
       border: 1px solid var(--vscode-dropdown-border, transparent);
-      border-radius: 3px;
-      padding: 2px 4px;
-      font-size: 11px;
-      font-family: inherit;
+      border-radius: 3px; padding: 2px 4px;
+      font-size: 11px; font-family: inherit;
     }
-    .meta {
-      padding: 6px 12px;
-      font-size: 11px;
-      color: #b8b4c8;
-      border-bottom: 1px solid rgba(200, 182, 226, 0.08);
-      background: rgba(200, 182, 226, 0.015);
-      display: flex; gap: 10px; flex-wrap: wrap;
-    }
-    .meta button.linkbtn {
-      background: transparent; border: none; padding: 0;
-      color: var(--vscode-textLink-foreground);
-      cursor: pointer; font-size: 11px;
-      text-decoration: none;
-    }
-    .meta button.linkbtn:hover { text-decoration: underline; }
+    #meta-session { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     #actions {
       padding: 6px 10px;
       border-bottom: 1px solid rgba(200, 182, 226, 0.08);
@@ -423,6 +406,71 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       font-size: 11px; font-family: inherit; cursor: pointer;
     }
     .action-btn:hover { background: var(--vscode-list-hoverBackground); }
+    #settings-panel {
+      display: none; flex-direction: column; gap: 0;
+      flex: 1; overflow-y: auto; padding: 0;
+    }
+    .sp-section { padding: 14px 14px 10px; border-bottom: 1px solid rgba(200,182,226,0.08); }
+    .sp-section h3 { margin: 0 0 10px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: var(--vscode-descriptionForeground); }
+    .sp-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+    .sp-row:last-child { margin-bottom: 0; }
+    .sp-label { font-size: 12px; font-weight: 600; }
+    .sp-desc { font-size: 11px; color: var(--vscode-descriptionForeground); margin-top: 2px; }
+    .sp-select, .sp-input {
+      width: 100%; padding: 6px 8px; margin-top: 4px;
+      background: var(--vscode-input-background);
+      color: var(--vscode-input-foreground);
+      border: 1px solid var(--vscode-input-border, transparent);
+      border-radius: 4px; font-family: inherit; font-size: 12px;
+      box-sizing: border-box;
+    }
+    .sp-select:focus, .sp-input:focus { outline: none; border-color: var(--vscode-focusBorder); }
+    .sp-btn {
+      padding: 5px 12px; margin-top: 6px;
+      background: var(--vscode-button-background);
+      color: var(--vscode-button-foreground);
+      border: none; border-radius: 4px; cursor: pointer;
+      font-size: 12px; font-family: inherit; font-weight: 500;
+    }
+    .sp-btn:hover { background: var(--vscode-button-hoverBackground); }
+    .sp-toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; }
+    .sp-toggle-row span { font-size: 12px; }
+    .sp-toggle {
+      width: 36px; height: 20px; border-radius: 10px; border: none; cursor: pointer;
+      background: var(--vscode-panel-border); position: relative; transition: background 0.15s;
+    }
+    .sp-toggle.on { background: var(--vscode-button-background); }
+    .sp-toggle::after {
+      content: ''; position: absolute; top: 3px; left: 3px;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: white; transition: left 0.15s;
+    }
+    .sp-toggle.on::after { left: 19px; }
+    #btn-gear {
+      background: none; border: none; cursor: pointer; padding: 2px 4px;
+      color: var(--vscode-foreground); font-size: 15px; opacity: 0.7;
+    }
+    #btn-gear:hover { opacity: 1; }
+    #inline-picker {
+      display: none; flex-direction: column; gap: 3px;
+      padding: 6px 10px;
+      border-bottom: 1px solid rgba(200,182,226,0.08);
+      background: rgba(200,182,226,0.03);
+    }
+    #inline-picker .picker-label {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.4px;
+      color: var(--vscode-descriptionForeground); text-transform: uppercase; margin-bottom: 2px;
+    }
+    .picker-row { display: flex; flex-wrap: wrap; gap: 4px; }
+    .picker-opt {
+      background: var(--vscode-editorWidget-background);
+      color: var(--vscode-foreground);
+      border: 1px solid var(--vscode-panel-border);
+      border-radius: 4px; padding: 3px 9px;
+      font-size: 11px; font-family: inherit; cursor: pointer;
+    }
+    .picker-opt:hover { background: var(--vscode-list-hoverBackground); }
+    .picker-opt.active { border-color: var(--vscode-focusBorder); color: var(--vscode-focusBorder); }
     .starter-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
     .starter-chip {
       background: var(--vscode-button-background);
@@ -560,81 +608,59 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   </style>
 </head>
 <body>
-  <svg class="ornament top" viewBox="0 0 240 40" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-    <g fill="currentColor">
-      <path d="M120 6 L122 14 L130 16 L122 18 L120 26 L118 18 L110 16 L118 14 Z"/>
-      <circle cx="120" cy="30" r="1.6"/>
-      <path d="M115 9 Q113 6 116 4 Q119 6 117 9 Z"/>
-      <path d="M125 9 Q127 6 124 4 Q121 6 123 9 Z"/>
-    </g>
-    <g fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round">
-      <path d="M120 20 Q104 20 94 23 Q86 25 80 23 Q73 21 68 25"/>
-      <path d="M120 20 Q136 20 146 23 Q154 25 160 23 Q167 21 172 25"/>
-      <path d="M80 23 Q76 28 82 31 Q88 31 86 25"/>
-      <path d="M160 23 Q164 28 158 31 Q152 31 154 25"/>
-      <path d="M68 25 Q58 23 53 27 Q49 29 45 26"/>
-      <path d="M172 25 Q182 23 187 27 Q191 29 195 26"/>
-      <path d="M45 26 Q38 24 32 28 Q28 30 23 27"/>
-      <path d="M195 26 Q202 24 208 28 Q212 30 217 27"/>
-      <path d="M23 27 Q18 30 14 28"/>
-      <path d="M217 27 Q222 30 226 28"/>
-      <path d="M94 23 Q92 17 96 13"/>
-      <path d="M146 23 Q148 17 144 13"/>
-    </g>
-    <g fill="currentColor">
-      <path d="M96 13 Q94 10 96 8 Q98 10 96 13 Z"/>
-      <path d="M144 13 Q146 10 144 8 Q142 10 144 13 Z"/>
-      <circle cx="14" cy="28" r="1.2"/>
-      <circle cx="226" cy="28" r="1.2"/>
-    </g>
-  </svg>
-  <svg class="ornament bottom" viewBox="0 0 240 40" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-    <g fill="currentColor">
-      <path d="M120 6 L122 14 L130 16 L122 18 L120 26 L118 18 L110 16 L118 14 Z"/>
-      <circle cx="120" cy="30" r="1.6"/>
-      <path d="M115 9 Q113 6 116 4 Q119 6 117 9 Z"/>
-      <path d="M125 9 Q127 6 124 4 Q121 6 123 9 Z"/>
-    </g>
-    <g fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round">
-      <path d="M120 20 Q104 20 94 23 Q86 25 80 23 Q73 21 68 25"/>
-      <path d="M120 20 Q136 20 146 23 Q154 25 160 23 Q167 21 172 25"/>
-      <path d="M80 23 Q76 28 82 31 Q88 31 86 25"/>
-      <path d="M160 23 Q164 28 158 31 Q152 31 154 25"/>
-      <path d="M68 25 Q58 23 53 27 Q49 29 45 26"/>
-      <path d="M172 25 Q182 23 187 27 Q191 29 195 26"/>
-      <path d="M45 26 Q38 24 32 28 Q28 30 23 27"/>
-      <path d="M195 26 Q202 24 208 28 Q212 30 217 27"/>
-      <path d="M23 27 Q18 30 14 28"/>
-      <path d="M217 27 Q222 30 226 28"/>
-      <path d="M94 23 Q92 17 96 13"/>
-      <path d="M146 23 Q148 17 144 13"/>
-    </g>
-    <g fill="currentColor">
-      <path d="M96 13 Q94 10 96 8 Q98 10 96 13 Z"/>
-      <path d="M144 13 Q146 10 144 8 Q142 10 144 13 Z"/>
-      <circle cx="14" cy="28" r="1.2"/>
-      <circle cx="226" cy="28" r="1.2"/>
-    </g>
-  </svg>
-  <header>
-    <div class="title"><span class="dot"></span><span class="brand"><span class="c1">V</span><span class="c2">i</span><span class="c3">b</span><span class="c4">e</span><span class="c5">L</span><span class="c6">e</span><span class="c7">a</span><span class="c8">r</span><span class="c9">n</span></span></div>
-    <div class="level-row">
-      <label for="level">help</label>
-      <select id="level" title="Change how much VibeLearn teaches vs. answers">
-        <option value="strict">strict</option>
-        <option value="guided">guided</option>
-        <option value="assist">assist</option>
-        <option value="full">full</option>
-      </select>
+  <!-- Settings Panel (replaces chat content when gear is open) -->
+  <div id="settings-panel">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px 0">
+      <strong style="font-size:13px">Settings</strong>
+      <button id="btn-close-settings" type="button" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--vscode-foreground);opacity:0.7;padding:2px 6px">✕</button>
     </div>
-  </header>
-  <div class="meta">
-    <span id="meta-provider">provider: —</span>
-    <span id="meta-model">model: —</span>
-    <span id="meta-mode" style="display:none">🔍 Socratic</span>
-    <button class="linkbtn" id="btn-pick-model" type="button">change model</button>
-    <button class="linkbtn" id="btn-set-key" type="button">set API key</button>
-    <button class="linkbtn" id="btn-clear" type="button">clear chat</button>
+    <div class="sp-section">
+      <h3>Provider &amp; Model</h3>
+      <div class="sp-row">
+        <span class="sp-label">Provider</span>
+        <select class="sp-select" id="sp-provider">
+          <option value="openai">OpenAI</option>
+          <option value="ollama">Ollama (local, free)</option>
+          <option value="anthropic">Anthropic</option>
+          <option value="gemini">Google Gemini</option>
+          <option value="openrouter">OpenRouter</option>
+        </select>
+      </div>
+      <div class="sp-row">
+        <span class="sp-label">API Key</span>
+        <span class="sp-desc" id="sp-key-desc">Not needed for Ollama.</span>
+        <input class="sp-input" id="sp-key-input" type="password" placeholder="Paste API key…" autocomplete="off" />
+        <button class="sp-btn" id="sp-save-key" type="button">Save Key</button>
+      </div>
+      <div class="sp-row">
+        <span class="sp-label">Model</span>
+        <select class="sp-select" id="sp-model"></select>
+        <input class="sp-input" id="sp-model-custom" placeholder="or type a custom model id…" style="margin-top:4px" />
+        <button class="sp-btn" id="sp-save-model" type="button">Save Model</button>
+      </div>
+    </div>
+    <div class="sp-section">
+      <h3>Teaching Mode</h3>
+      <div class="sp-toggle-row">
+        <span>Socratic Mode <span class="sp-desc" style="display:block;font-size:10px">Teach through questions</span></span>
+        <button class="sp-toggle" id="sp-socratic" data-toggle="socraticMode" type="button"></button>
+      </div>
+      <div class="sp-toggle-row">
+        <span>Attempt First <span class="sp-desc" style="display:block;font-size:10px">Ask user to try before answering</span></span>
+        <button class="sp-toggle" id="sp-attempt" data-toggle="attemptFirst" type="button"></button>
+      </div>
+      <div class="sp-toggle-row">
+        <span>Workspace Context <span class="sp-desc" style="display:block;font-size:10px">Include project files in prompts</span></span>
+        <button class="sp-toggle" id="sp-workspace" data-toggle="includeWorkspaceContext" type="button"></button>
+      </div>
+    </div>
+    <div class="sp-section">
+      <h3>Data</h3>
+      <div class="sp-row">
+        <button class="sp-btn" type="button" data-cmd="vibelearn.showLearningProfile">View Learning Profile</button>
+        <button class="sp-btn" type="button" data-cmd="vibelearn.clearLearningProfile" style="margin-top:4px;background:var(--vscode-inputValidation-errorBackground);color:var(--vscode-foreground)">Clear Learning Profile</button>
+      </div>
+    </div>
   </div>
   <div id="onboarding" role="region" aria-label="Setup required">
     <h3>👋 Welcome to VibeLearn</h3>
@@ -647,14 +673,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     <div class="onboarding-btns">
       <button type="button" data-cmd="vibelearn.pickModel" title="Choose your AI provider and model">Choose Model</button>
       <button type="button" data-cmd="vibelearn.setApiKey" title="Add your API key (not needed for Ollama)">Set API Key</button>
-    </div>
-  </div>
-  <div id="actions" style="display:none">
-    <div class="action-group">
-      <span class="action-label">Settings</span>
-      <button class="action-btn" type="button" data-cmd="vibelearn.toggleSocraticMode" title="Toggle Socratic Mode on or off">Socratic Mode</button>
-      <button class="action-btn" type="button" data-cmd="vibelearn.showLearningProfile" title="Show your learning profile">Learning Profile</button>
-      <button class="action-btn" type="button" data-cmd="vibelearn.showWorkspaceContext" title="Show workspace context">Workspace Context</button>
     </div>
   </div>
   <div id="messages">
@@ -674,6 +692,17 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     <input id="input" type="text" placeholder="Ask anything — I'll teach, not solve…" autocomplete="off" />
     <button id="send" type="submit">Send</button>
   </form>
+  <div id="bottom-bar">
+    <label for="level">help</label>
+    <select id="level" title="Change how much VibeLearn teaches vs. answers">
+      <option value="strict">strict</option>
+      <option value="guided">guided</option>
+      <option value="assist">assist</option>
+      <option value="full">full</option>
+    </select>
+    <span id="meta-session"></span>
+    <button id="btn-gear" class="linkbtn" type="button" title="Settings">⚙</button>
+  </div>
   <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
     const messagesEl = document.getElementById('messages');
@@ -682,9 +711,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     const input = document.getElementById('input');
     const sendBtn = document.getElementById('send');
     const levelEl = document.getElementById('level');
-    const metaProvider = document.getElementById('meta-provider');
-    const metaModel = document.getElementById('meta-model');
-    const metaMode = document.getElementById('meta-mode');
     const onboardingEl = document.getElementById('onboarding');
     const actionsEl = document.getElementById('actions');
     let typingEl = null;
@@ -737,25 +763,80 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       vscode.postMessage({ type: 'setHelpLevel', value: levelEl.value });
     });
 
-    document.getElementById('actions').addEventListener('click', (e) => {
+    document.getElementById('actions')?.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-cmd]');
       if (btn) vscode.postMessage({ type: 'command', command: btn.getAttribute('data-cmd') });
+      const tog = e.target.closest('[data-toggle]');
+      if (tog) vscode.postMessage({ type: 'toggleSetting', key: tog.getAttribute('data-toggle') });
     });
 
-    document.getElementById('btn-pick-model').addEventListener('click', () => {
-      vscode.postMessage({ type: 'pickModel' });
-    });
-    document.getElementById('btn-set-key').addEventListener('click', () => {
-      vscode.postMessage({ type: 'setApiKey' });
-    });
-    document.getElementById('btn-clear').addEventListener('click', () => {
-      while (messagesEl.firstChild) messagesEl.removeChild(messagesEl.firstChild);
-      messagesEl.appendChild(welcomeEl.cloneNode(true));
-      // re-bind pill listeners on the new node
-      document.querySelectorAll('.pill').forEach((p) => {
-        p.addEventListener('click', () => send(p.getAttribute('data-prompt') || p.textContent));
+    // Settings panel
+    const MODELS = {
+      openai: ['gpt-4o-mini','gpt-4o','gpt-4-turbo','o1-mini'],
+      ollama: ['llama3.2','qwen2.5-coder:7b','mistral','phi3'],
+      anthropic: ['claude-haiku-4-5','claude-sonnet-4-6','claude-opus-4-7'],
+      gemini: ['gemini-1.5-flash','gemini-1.5-pro'],
+      openrouter: ['openrouter/auto','anthropic/claude-sonnet-4','openai/gpt-4o-mini']
+    };
+    let settingsOpen = false;
+    const settingsPanel = document.getElementById('settings-panel');
+    const chatContent = document.getElementById('messages');
+    const chatForm = document.getElementById('form');
+    const actionsEl2 = document.getElementById('actions');
+
+    function openSettings() {
+      settingsOpen = true;
+      settingsPanel.style.display = 'flex';
+      chatContent.style.display = 'none';
+      chatForm.style.display = 'none';
+      if (actionsEl2) actionsEl2.style.display = 'none';
+    }
+    function closeSettings() {
+      settingsOpen = false;
+      settingsPanel.style.display = 'none';
+      chatContent.style.display = 'flex';
+      chatForm.style.display = 'flex';
+    }
+
+    document.getElementById('btn-gear').addEventListener('click', () => settingsOpen ? closeSettings() : openSettings());
+    document.getElementById('btn-close-settings').addEventListener('click', () => closeSettings());
+
+    // Populate model dropdown when provider changes in settings
+    function populateModels(provider) {
+      const sel = document.getElementById('sp-model');
+      sel.innerHTML = '';
+      (MODELS[provider] || []).forEach(m => {
+        const o = document.createElement('option'); o.value = m; o.textContent = m; sel.appendChild(o);
       });
-      vscode.postMessage({ type: 'clearChat' });
+      const keyDesc = document.getElementById('sp-key-desc');
+      if (keyDesc) keyDesc.textContent = provider === 'ollama' ? 'Not needed for Ollama.' : 'Stored securely in OS keychain.';
+    }
+
+    document.getElementById('sp-provider').addEventListener('change', (e) => {
+      populateModels(e.target.value);
+      vscode.postMessage({ type: 'setProvider', provider: e.target.value });
+    });
+
+    document.getElementById('sp-save-model').addEventListener('click', () => {
+      const custom = document.getElementById('sp-model-custom').value.trim();
+      const model = custom || document.getElementById('sp-model').value;
+      if (model) vscode.postMessage({ type: 'setModel', model });
+    });
+
+    document.getElementById('sp-save-key').addEventListener('click', () => {
+      const key = document.getElementById('sp-key-input').value.trim();
+      const provider = document.getElementById('sp-provider').value;
+      if (!key) return;
+      vscode.postMessage({ type: 'saveApiKey', provider, key });
+      document.getElementById('sp-key-input').value = '';
+    });
+
+    // Toggle switches in settings panel
+    document.getElementById('settings-panel').addEventListener('click', (e) => {
+      const tog = e.target.closest('.sp-toggle[data-toggle]');
+      if (tog) vscode.postMessage({ type: 'toggleSetting', key: tog.getAttribute('data-toggle') });
+      const cmd = e.target.closest('[data-cmd]');
+      if (cmd) vscode.postMessage({ type: 'command', command: cmd.getAttribute('data-cmd') });
     });
 
     window.addEventListener('message', (event) => {
@@ -802,14 +883,39 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         sendBtn.disabled = !!msg.busy;
         input.disabled = !!msg.busy;
         if (!msg.busy) input.focus();
+      } else if (msg.type === 'toggleSettings') {
+        settingsOpen ? closeSettings() : openSettings();
       } else if (msg.type === 'settings') {
         if (msg.helpLevel) levelEl.value = msg.helpLevel;
-        if (msg.provider) metaProvider.textContent = 'provider: ' + msg.provider;
-        if (msg.model) metaModel.textContent = 'model: ' + msg.model;
-        if (metaMode) metaMode.style.display = msg.socraticMode ? 'inline' : 'none';
         const configured = !!msg.configured;
         if (onboardingEl) onboardingEl.style.display = configured ? 'none' : 'block';
-        if (actionsEl) actionsEl.style.display = configured ? 'flex' : 'none';
+        if (!settingsOpen && actionsEl) actionsEl.style.display = configured ? 'flex' : 'none';
+
+        // Sync settings panel controls
+        const spProvider = document.getElementById('sp-provider');
+        if (spProvider && msg.provider) { spProvider.value = msg.provider; populateModels(msg.provider); }
+        const spModel = document.getElementById('sp-model');
+        if (spModel && msg.model) spModel.value = msg.model;
+        const tog = (id, on) => { const b = document.getElementById(id); if (b) { b.className = 'sp-toggle' + (on ? ' on' : ''); } };
+        tog('sp-socratic', msg.socraticMode);
+        tog('sp-attempt', msg.attemptFirst);
+        tog('sp-workspace', msg.includeWorkspaceContext);
+
+        // Session-contextual groups
+        const hasSession = !!msg.sessionName;
+        const show = (id, on) => { const el = document.getElementById(id); if (el) el.style.display = on ? 'flex' : 'none'; };
+        show('grp-no-session-project', !hasSession);
+        show('grp-no-session-code', !hasSession);
+        show('grp-session-project', hasSession);
+        show('grp-session-learn', hasSession);
+        show('grp-session-code', hasSession);
+
+        const statusEl = document.getElementById('session-status') || document.getElementById('meta-session');
+        if (statusEl) {
+          statusEl.textContent = hasSession
+            ? '\uD83D\uDCCD ' + msg.sessionName + ' \u2022 ' + msg.sessionProgress
+            : '';
+        }
       }
     });
 

@@ -446,6 +446,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       border-radius: 4px; font-size: 11px;
     }
     .vl-select-btn:hover { border-color: var(--vl-accent); }
+    .vl-select-label.placeholder { color: var(--vscode-descriptionForeground); font-style: italic; }
+    .vl-select-label:empty::before { content: '\\00a0'; }
     .vl-select.open .vl-select-btn { border-color: var(--vl-accent); background: var(--vl-accent); }
     .vl-select-menu {
       list-style: none; margin: 4px 0 0; padding: 4px;
@@ -842,7 +844,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
           menu.appendChild(li);
         });
         const current = select.options[select.selectedIndex];
-        label.textContent = current ? current.textContent : '';
+        label.textContent = current ? current.textContent : (opts.placeholder || '');
+        label.classList.toggle('placeholder', !current);
       }
 
       function closeMenu() {
@@ -872,8 +875,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     });
 
     enhanceSelect(levelEl, { compact: true, openUp: true });
-    enhanceSelect(document.getElementById('sp-provider'));
-    enhanceSelect(document.getElementById('sp-model'));
+    enhanceSelect(document.getElementById('sp-provider'), { placeholder: 'Select a provider…' });
+    enhanceSelect(document.getElementById('sp-model'), { placeholder: 'Select a model…' });
 
     // Populate model dropdown when provider changes in settings
     function populateModels(provider) {
@@ -887,7 +890,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       if (keyDesc) keyDesc.textContent = provider === 'ollama' ? 'Not needed for Ollama.' : 'Stored securely in OS keychain.';
     }
 
+    let providerTouched = false;
     document.getElementById('sp-provider').addEventListener('change', (e) => {
+      providerTouched = true;
       populateModels(e.target.value);
       vscode.postMessage({ type: 'setProvider', provider: e.target.value });
     });
@@ -969,12 +974,15 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         // Sync settings panel controls
         const spProvider = document.getElementById('sp-provider');
         if (spProvider && msg.provider) {
-          spProvider.value = msg.provider;
+          if (configured || providerTouched) { spProvider.value = msg.provider; } else { spProvider.selectedIndex = -1; }
           if (spProvider._vlRefresh) spProvider._vlRefresh();
           populateModels(msg.provider);
         }
         const spModel = document.getElementById('sp-model');
-        if (spModel && msg.model) { spModel.value = msg.model; if (spModel._vlRefresh) spModel._vlRefresh(); }
+        if (spModel) {
+          if ((configured || providerTouched) && msg.model) { spModel.value = msg.model; } else { spModel.selectedIndex = -1; }
+          if (spModel._vlRefresh) spModel._vlRefresh();
+        }
         const tog = (id, on) => { const b = document.getElementById(id); if (b) { b.className = 'sp-toggle' + (on ? ' on' : ''); } };
         tog('sp-socratic', msg.socraticMode);
         tog('sp-attempt', msg.attemptFirst);

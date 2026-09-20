@@ -716,7 +716,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     <button id="send" type="submit">Send</button>
   </form>
   <div id="bottom-bar">
-    <label for="level">help</label>
+    <label for="level">🎓 mode</label>
     <select id="level" title="Change how much VibeLearn teaches vs. answers">
       <option value="strict">strict</option>
       <option value="guided">guided</option>

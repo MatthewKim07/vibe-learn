@@ -385,7 +385,7 @@ async function startLearningSession(
         const apiKey = await getApiKey(context.secrets, providerName);
         const client = createClient({ provider: providerName, apiKey });
         const messages = buildRoadmapMessages(idea.trim(), helpLevel);
-        const roadmap = await client.complete({ model, messages });
+        const { content: roadmap } = await client.complete({ model, messages });
 
         const milestones = extractMilestonesFromRoadmap(roadmap);
         if (milestones.length === 0) {

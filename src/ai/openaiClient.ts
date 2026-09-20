@@ -1,9 +1,10 @@
-import { ChatMessage, AIClient, AIError, AIRequest, Provider } from './types';
+import { ChatMessage, AIClient, AIError, AIRequest, AIResponse, Provider } from './types';
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 
 interface OpenAIResponse {
   choices?: Array<{ message?: { content?: string } }>;
+  usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
   error?: { message?: string; type?: string };
 }
 
@@ -16,7 +17,7 @@ export class OpenAIClient implements AIClient {
     }
   }
 
-  async complete(req: AIRequest): Promise<string> {
+  async complete(req: AIRequest): Promise<AIResponse> {
     const body = {
       model: req.model,
       messages: req.messages.map((m: ChatMessage) => ({
@@ -60,7 +61,14 @@ export class OpenAIClient implements AIClient {
     if (typeof content !== 'string' || content.length === 0) {
       throw new AIError('OpenAI response did not contain content.');
     }
-    return content;
+    return {
+      content,
+      usage: data.usage && {
+        promptTokens: data.usage.prompt_tokens,
+        completionTokens: data.usage.completion_tokens,
+        totalTokens: data.usage.total_tokens
+      }
+    };
   }
 }
 

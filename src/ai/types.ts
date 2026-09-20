@@ -15,9 +15,20 @@ export interface AIRequest {
   signal?: AbortSignal;
 }
 
+export interface AIUsage {
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+}
+
+export interface AIResponse {
+  content: string;
+  usage?: AIUsage;
+}
+
 export interface AIClient {
   readonly provider: Provider;
-  complete(req: AIRequest): Promise<string>;
+  complete(req: AIRequest): Promise<AIResponse>;
 }
 
 export class AIError extends Error {

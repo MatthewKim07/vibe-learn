@@ -3,7 +3,7 @@ import { createClient } from './ai';
 import { buildMessages } from './ai/promptBuilder';
 import { buildRoadmapMessages } from './ai/roadmapPrompt';
 import { hasAttempt } from './ai/attemptDetector';
-import { AIError, ChatMessage, HelpLevel, Provider } from './ai/types';
+import { AIError, AIUsage, ChatMessage, HelpLevel, Provider } from './ai/types';
 import { getApiKey, storeApiKey } from './secrets';
 import {
   extractProfileUpdate,
@@ -24,6 +24,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   private webviewView?: vscode.WebviewView;
   private pendingExternal?: { payload: string; displayText: string };
   private configWatcher?: vscode.Disposable;
+  private totalTokensUsed = 0;
 
   constructor(private readonly context: vscode.ExtensionContext) {}
 
@@ -155,12 +156,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       const apiKey = await getApiKey(this.context.secrets, provider);
       const client = createClient({ provider, apiKey });
       const messages = buildRoadmapMessages(idea, helpLevel);
-      const reply = await client.complete({ model, messages });
+      const { content: reply, usage } = await client.complete({ model, messages });
       this.history.push(
         { role: 'user', content: `Create a project roadmap for: ${idea}` },
         { role: 'assistant', content: reply }
       );
       this.postAssistant(reply);
+      this.recordUsage(usage);
     } catch (err) {
       const message = err instanceof AIError
         ? err.message
@@ -189,12 +191,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     try {
       const apiKey = await getApiKey(this.context.secrets, opts.providerName);
       const client = createClient({ provider: opts.providerName, apiKey });
-      const reply = await client.complete({ model: opts.model, messages });
+      const { content: reply, usage } = await client.complete({ model: opts.model, messages });
       this.history.push(
         { role: 'user', content: messages[messages.length - 1].content },
         { role: 'assistant', content: reply }
       );
       this.postAssistant(reply);
+      this.recordUsage(usage);
     } catch (err) {
       const message = err instanceof AIError
         ? err.message
@@ -296,9 +299,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         workspaceContext
       });
 
-      const reply = await client.complete({ model, messages });
+      const { content: reply, usage } = await client.complete({ model, messages });
       this.history.push({ role: 'assistant', content: reply });
       this.postAssistant(reply);
+      this.recordUsage(usage);
 
       // Update profile from the AI reply (fire-and-forget, non-blocking)
       const profileUpdate = extractProfileUpdate(reply);
@@ -336,6 +340,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
   private postBusy(busy: boolean) {
     this.webviewView?.webview.postMessage({ type: 'busy', busy });
+  }
+
+  private recordUsage(usage?: AIUsage) {
+    if (!usage) return;
+    const total = usage.totalTokens ?? (usage.promptTokens ?? 0) + (usage.completionTokens ?? 0);
+    this.totalTokensUsed += total;
+    this.webviewView?.webview.postMessage({ type: 'usage', totalTokens: this.totalTokensUsed });
   }
 
   private getHtml(webview: vscode.Webview): string {
@@ -390,6 +401,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       font-size: 11px; font-family: inherit;
     }
     #meta-session { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #meta-usage { flex-shrink: 0; opacity: 0.7; }
     #actions {
       padding: 6px 10px;
       border-bottom: 1px solid rgba(200, 182, 226, 0.08);
@@ -724,6 +736,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       <option value="full">full</option>
     </select>
     <span id="meta-session"></span>
+    <span id="meta-usage" title="Cumulative tokens used this session"></span>
   </div>
   <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
@@ -739,6 +752,11 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
     function clearWelcome() {
       if (welcomeEl && welcomeEl.parentNode) welcomeEl.remove();
+    }
+
+    function formatTokens(n) {
+      if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+      return String(n);
     }
 
     function append(text, role) {
@@ -973,6 +991,11 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         if (!msg.busy) input.focus();
       } else if (msg.type === 'toggleSettings') {
         settingsOpen ? closeSettings() : openSettings();
+      } else if (msg.type === 'usage') {
+        const usageEl = document.getElementById('meta-usage');
+        if (usageEl && typeof msg.totalTokens === 'number') {
+          usageEl.textContent = formatTokens(msg.totalTokens) + ' tok';
+        }
       } else if (msg.type === 'settings') {
         if (msg.helpLevel) { levelEl.value = msg.helpLevel; if (levelEl._vlRefresh) levelEl._vlRefresh(); }
         const configured = !!msg.configured;

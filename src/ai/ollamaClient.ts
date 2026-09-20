@@ -1,5 +1,5 @@
 import { resolveModel } from './modelMatch';
-import { AIClient, AIError, AIRequest, ChatMessage, Provider } from './types';
+import { AIClient, AIError, AIRequest, AIResponse, ChatMessage, Provider } from './types';
 
 const DEFAULT_HOST = 'http://localhost:11434';
 const CHAT_PATH = '/api/chat';
@@ -9,6 +9,8 @@ interface OllamaResponse {
   message?: { role?: string; content?: string };
   error?: string;
   done?: boolean;
+  prompt_eval_count?: number;
+  eval_count?: number;
 }
 
 interface OllamaTagsResponse {
@@ -37,7 +39,7 @@ export class OllamaClient implements AIClient {
       .filter((n): n is string => typeof n === 'string');
   }
 
-  async complete(req: AIRequest): Promise<string> {
+  async complete(req: AIRequest): Promise<AIResponse> {
     const url = `${this.host.replace(/\/$/, '')}${CHAT_PATH}`;
 
     const available = await this.listModels(req.signal);
@@ -106,7 +108,21 @@ export class OllamaClient implements AIClient {
     if (typeof content !== 'string' || content.length === 0) {
       throw new AIError('Ollama response did not contain content.');
     }
-    return content;
+    const { prompt_eval_count: promptTokens, eval_count: completionTokens } = data;
+    const hasUsage = promptTokens !== undefined || completionTokens !== undefined;
+    return {
+      content,
+      usage: hasUsage
+        ? {
+            promptTokens,
+            completionTokens,
+            totalTokens:
+              promptTokens !== undefined && completionTokens !== undefined
+                ? promptTokens + completionTokens
+                : undefined
+          }
+        : undefined
+    };
   }
 }
 

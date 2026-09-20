@@ -585,7 +585,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       font-family: 'Playful', var(--vscode-font-family);
       font-size: 28px;
       font-weight: 400;
-      color: var(--vl-fg);
+      color: var(--vl-accent-hover);
     }
     .typing {
       align-self: flex-start;

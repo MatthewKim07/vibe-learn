@@ -340,9 +340,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
 
   private getHtml(webview: vscode.Webview): string {
     const nonce = getNonce();
+    const fontUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.context.extensionUri, 'media', 'fonts', 'Playful.otf')
+    );
     const csp = [
       `default-src 'none'`,
       `style-src ${webview.cspSource} 'unsafe-inline'`,
+      `font-src ${webview.cspSource}`,
       `script-src 'nonce-${nonce}'`
     ].join('; ');
 
@@ -353,14 +357,20 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   <meta http-equiv="Content-Security-Policy" content="${csp}" />
   <title>VibeLearn</title>
   <style>
-    :root { color-scheme: light dark; }
+    :root {
+      color-scheme: light dark;
+      --vl-bg: #000000;
+      --vl-fg: #ffffff;
+      --vl-accent: #1B4D3E;
+      --vl-accent-hover: #256B54;
+    }
     * { box-sizing: border-box; }
     body {
       margin: 0; padding: 0;
       font-family: var(--vscode-font-family);
       font-size: var(--vscode-font-size);
-      color: var(--vscode-foreground);
-      background: var(--vscode-sideBar-background, #1e1e1e);
+      color: var(--vl-fg);
+      background: var(--vl-bg);
       display: flex; flex-direction: column;
       height: 100vh;
       overflow: hidden;
@@ -424,22 +434,22 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       border-radius: 4px; font-family: inherit; font-size: 12px;
       box-sizing: border-box;
     }
-    .sp-select:focus, .sp-input:focus { outline: none; border-color: var(--vscode-focusBorder); }
+    .sp-select:focus, .sp-input:focus { outline: none; border-color: var(--vl-accent); }
     .sp-btn {
       padding: 5px 12px; margin-top: 6px;
-      background: var(--vscode-button-background);
+      background: var(--vl-accent);
       color: var(--vscode-button-foreground);
       border: none; border-radius: 4px; cursor: pointer;
       font-size: 12px; font-family: inherit; font-weight: 500;
     }
-    .sp-btn:hover { background: var(--vscode-button-hoverBackground); }
+    .sp-btn:hover { background: var(--vl-accent-hover); }
     .sp-toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; }
     .sp-toggle-row span { font-size: 12px; }
     .sp-toggle {
       width: 36px; height: 20px; border-radius: 10px; border: none; cursor: pointer;
       background: var(--vscode-panel-border); position: relative; transition: background 0.15s;
     }
-    .sp-toggle.on { background: var(--vscode-button-background); }
+    .sp-toggle.on { background: var(--vl-accent); }
     .sp-toggle::after {
       content: ''; position: absolute; top: 3px; left: 3px;
       width: 14px; height: 14px; border-radius: 50%;
@@ -470,15 +480,15 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       font-size: 11px; font-family: inherit; cursor: pointer;
     }
     .picker-opt:hover { background: var(--vscode-list-hoverBackground); }
-    .picker-opt.active { border-color: var(--vscode-focusBorder); color: var(--vscode-focusBorder); }
+    .picker-opt.active { border-color: var(--vl-accent); color: var(--vl-accent); }
     .starter-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
     .starter-chip {
-      background: var(--vscode-button-background);
+      background: var(--vl-accent);
       color: var(--vscode-button-foreground);
       border: none; border-radius: 12px;
       padding: 4px 10px; font-size: 12px; font-family: inherit; cursor: pointer;
     }
-    .starter-chip:hover { background: var(--vscode-button-hoverBackground); }
+    .starter-chip:hover { background: var(--vl-accent-hover); }
     .dismiss-link {
       display: block; margin-top: 8px; font-size: 11px;
       color: var(--vscode-descriptionForeground); cursor: pointer; background: none; border: none;
@@ -489,7 +499,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       margin: 8px 10px;
       padding: 10px 12px;
       background: var(--vscode-editorWidget-background);
-      border: 1px solid var(--vscode-focusBorder, rgba(200,182,226,0.3));
+      border: 1px solid var(--vl-accent);
       border-radius: 6px;
       display: none;
     }
@@ -501,12 +511,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     .onboarding-btns button {
       flex: 1;
       padding: 5px 8px;
-      background: var(--vscode-button-background);
+      background: var(--vl-accent);
       color: var(--vscode-button-foreground);
       border: none; border-radius: 4px; cursor: pointer;
       font-size: 12px; font-family: inherit; font-weight: 500;
     }
-    .onboarding-btns button:hover { background: var(--vscode-button-hoverBackground); }
+    .onboarding-btns button:hover { background: var(--vl-accent-hover); }
     #messages {
       flex: 1; overflow-y: auto;
       padding: 12px;
@@ -520,7 +530,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     }
     .msg.user {
       align-self: flex-end;
-      background: var(--vscode-button-background);
+      background: var(--vl-accent);
       color: var(--vscode-button-foreground);
       border-bottom-right-radius: 2px;
     }
@@ -537,32 +547,20 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       border: 1px solid var(--vscode-inputValidation-errorBorder);
       font-size: 12px;
     }
+    @font-face {
+      font-family: 'Playful';
+      src: url('${fontUri}') format('opentype');
+    }
     .welcome {
-      color: var(--vscode-foreground);
-      padding: 16px 6px 6px;
-      display: flex; flex-direction: column; gap: 12px;
+      padding: 20px 6px 6px;
+      display: flex; justify-content: center;
     }
     .welcome h2 {
-      margin: 0; font-size: 15px; font-weight: 600;
-    }
-    .welcome p {
-      margin: 0; font-size: 12.5px;
-      color: var(--vscode-descriptionForeground);
-      line-height: 1.5;
-    }
-    .welcome .pill-row {
-      display: flex; flex-wrap: wrap; gap: 6px;
-      margin-top: 4px;
-    }
-    .welcome .pill {
-      background: var(--vscode-editorWidget-background);
-      border: 1px solid var(--vscode-panel-border);
-      color: var(--vscode-foreground);
-      padding: 5px 9px; border-radius: 14px;
-      font-size: 12px; cursor: pointer;
-    }
-    .welcome .pill:hover {
-      background: var(--vscode-list-hoverBackground);
+      margin: 0;
+      font-family: 'Playful', var(--vscode-font-family);
+      font-size: 28px;
+      font-weight: 400;
+      color: var(--vl-fg);
     }
     .typing {
       align-self: flex-start;
@@ -595,15 +593,15 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       font-family: inherit; font-size: 13px;
       outline: none;
     }
-    #input:focus { border-color: var(--vscode-focusBorder); }
+    #input:focus { border-color: var(--vl-accent); }
     #send {
       padding: 7px 14px;
-      background: var(--vscode-button-background);
+      background: var(--vl-accent);
       color: var(--vscode-button-foreground);
       border: none; border-radius: 5px; cursor: pointer;
       font-family: inherit; font-size: 13px; font-weight: 500;
     }
-    #send:hover:not(:disabled) { background: var(--vscode-button-hoverBackground); }
+    #send:hover:not(:disabled) { background: var(--vl-accent-hover); }
     #send:disabled, #input:disabled { opacity: 0.5; cursor: not-allowed; }
   </style>
 </head>
@@ -677,15 +675,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   </div>
   <div id="messages">
     <div class="welcome" id="welcome">
-      <h2>👋 Welcome to <span class="brand"><span class="c1">V</span><span class="c2">i</span><span class="c3">b</span><span class="c4">e</span><span class="c5">L</span><span class="c6">e</span><span class="c7">a</span><span class="c8">r</span><span class="c9">n</span></span></h2>
-      <p>I'm a learning-first coding tutor. I won't write your whole program — I'll ask questions, drop hints, and name the concepts so you actually learn while you build.</p>
-      <p>The <strong>help</strong> selector above controls how much I show: <em>strict</em> = questions only, <em>full</em> = real answers. Default is <em>guided</em>.</p>
-      <div class="pill-row">
-        <button class="pill" type="button" data-prompt="How do for loops work in Python?">How do for loops work?</button>
-        <button class="pill" type="button" data-prompt="What's a closure in JavaScript?">What's a closure?</button>
-        <button class="pill" type="button" data-prompt="Help me debug a NullPointerException I keep getting.">Help me debug</button>
-        <button class="pill" type="button" data-prompt="I want to build a todo app. Where should I start?">Plan a project</button>
-      </div>
+      <h2>VibeLearn</h2>
     </div>
   </div>
   <form id="form">
@@ -753,10 +743,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       send(input.value);
-    });
-
-    document.querySelectorAll('.pill').forEach((p) => {
-      p.addEventListener('click', () => send(p.getAttribute('data-prompt') || p.textContent));
     });
 
     levelEl.addEventListener('change', () => {

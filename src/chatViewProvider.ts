@@ -435,6 +435,39 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       box-sizing: border-box;
     }
     .sp-select:focus, .sp-input:focus { outline: none; border-color: var(--vl-accent); }
+    .vl-select { position: relative; display: block; }
+    .vl-select--compact { display: inline-block; }
+    .vl-select-btn {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      width: 100%; padding: 6px 10px; margin-top: 4px;
+      background: var(--vscode-input-background);
+      color: var(--vl-fg);
+      border: 1px solid var(--vscode-input-border, transparent);
+      border-radius: 6px; font-family: inherit; font-size: 12px; cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .vl-select--compact .vl-select-btn {
+      width: auto; padding: 2px 8px; margin-top: 0;
+      border-radius: 4px; font-size: 11px;
+    }
+    .vl-select-btn:hover { border-color: var(--vl-accent); }
+    .vl-select.open .vl-select-btn { border-color: var(--vl-accent); background: var(--vl-accent); }
+    .vl-select-menu {
+      list-style: none; margin: 4px 0 0; padding: 4px;
+      position: absolute; left: 0; right: 0; top: 100%; z-index: 50;
+      background: #0d0d0d;
+      border: 1px solid var(--vl-accent);
+      border-radius: 6px;
+      max-height: 220px; overflow-y: auto;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.55);
+    }
+    .vl-select--compact .vl-select-menu { left: auto; right: auto; min-width: 110px; }
+    .vl-select-menu.up { top: auto; bottom: 100%; margin: 0 0 4px; }
+    .vl-select-option {
+      padding: 6px 8px; font-size: 12px; border-radius: 4px; cursor: pointer; color: var(--vl-fg);
+    }
+    .vl-select-option:hover { background: var(--vl-accent-hover); }
+    .vl-select-option.active { background: var(--vl-accent); }
     .sp-btn {
       padding: 5px 12px; margin-top: 6px;
       background: var(--vl-accent);
@@ -787,6 +820,73 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     document.getElementById('btn-gear').addEventListener('click', () => settingsOpen ? closeSettings() : openSettings());
     document.getElementById('btn-close-settings').addEventListener('click', () => closeSettings());
 
+    // Custom dropdown: wraps a native <select> so we control the open menu look
+    // instead of the OS-rendered popup.
+    function enhanceSelect(select, opts) {
+      opts = opts || {};
+      select.style.display = 'none';
+      const wrap = document.createElement('div');
+      wrap.className = 'vl-select' + (opts.compact ? ' vl-select--compact' : '');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'vl-select-btn';
+      const label = document.createElement('span');
+      label.className = 'vl-select-label';
+      btn.appendChild(label);
+      const menu = document.createElement('ul');
+      menu.className = 'vl-select-menu' + (opts.openUp ? ' up' : '');
+      menu.hidden = true;
+      wrap.appendChild(btn);
+      wrap.appendChild(menu);
+      select.insertAdjacentElement('afterend', wrap);
+
+      function render() {
+        menu.innerHTML = '';
+        Array.from(select.options).forEach((opt) => {
+          const li = document.createElement('li');
+          li.className = 'vl-select-option' + (opt.value === select.value ? ' active' : '');
+          li.textContent = opt.textContent;
+          li.addEventListener('click', () => {
+            select.value = opt.value;
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            closeMenu();
+          });
+          menu.appendChild(li);
+        });
+        const current = select.options[select.selectedIndex];
+        label.textContent = current ? current.textContent : '';
+      }
+
+      function closeMenu() {
+        menu.hidden = true;
+        wrap.classList.remove('open');
+      }
+      function openMenu() {
+        document.querySelectorAll('.vl-select-menu').forEach((m) => { m.hidden = true; });
+        document.querySelectorAll('.vl-select.open').forEach((w) => w.classList.remove('open'));
+        render();
+        menu.hidden = false;
+        wrap.classList.add('open');
+      }
+
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        menu.hidden ? openMenu() : closeMenu();
+      });
+
+      render();
+      select._vlRefresh = render;
+    }
+
+    document.addEventListener('click', () => {
+      document.querySelectorAll('.vl-select-menu').forEach((m) => { m.hidden = true; });
+      document.querySelectorAll('.vl-select.open').forEach((w) => w.classList.remove('open'));
+    });
+
+    enhanceSelect(levelEl, { compact: true, openUp: true });
+    enhanceSelect(document.getElementById('sp-provider'));
+    enhanceSelect(document.getElementById('sp-model'));
+
     // Populate model dropdown when provider changes in settings
     function populateModels(provider) {
       const sel = document.getElementById('sp-model');
@@ -794,6 +894,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       (MODELS[provider] || []).forEach(m => {
         const o = document.createElement('option'); o.value = m; o.textContent = m; sel.appendChild(o);
       });
+      if (sel._vlRefresh) sel._vlRefresh();
       const keyDesc = document.getElementById('sp-key-desc');
       if (keyDesc) keyDesc.textContent = provider === 'ollama' ? 'Not needed for Ollama.' : 'Stored securely in OS keychain.';
     }
@@ -872,16 +973,20 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       } else if (msg.type === 'toggleSettings') {
         settingsOpen ? closeSettings() : openSettings();
       } else if (msg.type === 'settings') {
-        if (msg.helpLevel) levelEl.value = msg.helpLevel;
+        if (msg.helpLevel) { levelEl.value = msg.helpLevel; if (levelEl._vlRefresh) levelEl._vlRefresh(); }
         const configured = !!msg.configured;
         if (onboardingEl) onboardingEl.style.display = configured ? 'none' : 'block';
         if (!settingsOpen && actionsEl) actionsEl.style.display = configured ? 'flex' : 'none';
 
         // Sync settings panel controls
         const spProvider = document.getElementById('sp-provider');
-        if (spProvider && msg.provider) { spProvider.value = msg.provider; populateModels(msg.provider); }
+        if (spProvider && msg.provider) {
+          spProvider.value = msg.provider;
+          if (spProvider._vlRefresh) spProvider._vlRefresh();
+          populateModels(msg.provider);
+        }
         const spModel = document.getElementById('sp-model');
-        if (spModel && msg.model) spModel.value = msg.model;
+        if (spModel && msg.model) { spModel.value = msg.model; if (spModel._vlRefresh) spModel._vlRefresh(); }
         const tog = (id, on) => { const b = document.getElementById(id); if (b) { b.className = 'sp-toggle' + (on ? ' on' : ''); } };
         tog('sp-socratic', msg.socraticMode);
         tog('sp-attempt', msg.attemptFirst);

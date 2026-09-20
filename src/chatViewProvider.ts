@@ -375,11 +375,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       height: 100vh;
       overflow: hidden;
     }
-    #btn-gear {
-      background: none; border: none; cursor: pointer; padding: 2px 5px;
-      color: var(--vscode-foreground); font-size: 14px; opacity: 0.6; border-radius: 3px;
-    }
-    #btn-gear:hover { opacity: 1; background: var(--vscode-toolbar-hoverBackground); }
     #bottom-bar {
       display: flex; align-items: center; gap: 8px;
       padding: 4px 10px 6px;
@@ -489,11 +484,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       background: white; transition: left 0.15s;
     }
     .sp-toggle.on::after { left: 19px; }
-    #btn-gear {
-      background: none; border: none; cursor: pointer; padding: 2px 4px;
-      color: var(--vscode-foreground); font-size: 15px; opacity: 0.7;
-    }
-    #btn-gear:hover { opacity: 1; }
     #inline-picker {
       display: none; flex-direction: column; gap: 3px;
       padding: 6px 10px;
@@ -724,7 +714,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       <option value="full">full</option>
     </select>
     <span id="meta-session"></span>
-    <button id="btn-gear" class="linkbtn" type="button" title="Settings">⚙</button>
   </div>
   <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
@@ -817,7 +806,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       chatForm.style.display = 'flex';
     }
 
-    document.getElementById('btn-gear').addEventListener('click', () => settingsOpen ? closeSettings() : openSettings());
     document.getElementById('btn-close-settings').addEventListener('click', () => closeSettings());
 
     // Custom dropdown: wraps a native <select> so we control the open menu look

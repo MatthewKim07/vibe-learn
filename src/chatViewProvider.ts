@@ -578,7 +578,11 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     }
     .welcome {
       padding: 20px 6px 6px;
-      display: flex; justify-content: center;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+    }
+    .welcome-logo {
+      width: 40px; height: 40px;
+      color: var(--vl-accent-hover);
     }
     .welcome h2 {
       margin: 0;
@@ -700,6 +704,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
   </div>
   <div id="messages">
     <div class="welcome" id="welcome">
+      <svg class="welcome-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3 1 9l11 6 9-4.91V17"/>
+        <path d="M5 11.18V16c3.5 2.5 9.5 2.5 13 0v-4.82"/>
+      </svg>
       <h2>VibeLearn</h2>
     </div>
   </div>

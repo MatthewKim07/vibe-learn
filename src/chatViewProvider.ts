@@ -679,7 +679,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     </div>
   </div>
   <form id="form">
-    <input id="input" type="text" placeholder="Ask anything — I'll teach, not solve…" autocomplete="off" />
+    <input id="input" type="text" placeholder="Ask anything…" autocomplete="off" />
     <button id="send" type="submit">Send</button>
   </form>
   <div id="bottom-bar">

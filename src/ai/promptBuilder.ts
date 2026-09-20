@@ -1,5 +1,9 @@
 import { ChatMessage, HelpLevel } from './types';
 
+// Cap on how many past turns get resent to the model each request. Keeps prompt
+// tokens from growing unbounded as a conversation gets long.
+export const MAX_HISTORY_MESSAGES = 10;
+
 // Attempt-first addendum injected into the system prompt when enabled.
 const ATTEMPT_FIRST_NO_ATTEMPT: Record<HelpLevel, string> = {
   strict: `## Attempt-First (STRICT)
@@ -186,8 +190,11 @@ export function buildMessages({
   if (workspaceContext) {
     systemContent += '\n\n' + workspaceContext;
   }
+  const recentHistory = history
+    .filter((m) => m.role !== 'system')
+    .slice(-MAX_HISTORY_MESSAGES);
   return [
     { role: 'system', content: systemContent },
-    ...history.filter((m) => m.role !== 'system')
+    ...recentHistory
   ];
 }

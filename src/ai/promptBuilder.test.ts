@@ -1,6 +1,6 @@
 import { strict as assert } from 'node:assert';
 import { describe, it } from 'node:test';
-import { buildMessages, buildSystemPrompt } from './promptBuilder';
+import { MAX_HISTORY_MESSAGES, buildMessages, buildSystemPrompt } from './promptBuilder';
 import { ChatMessage, HelpLevel } from './types';
 
 const LEVELS: HelpLevel[] = ['strict', 'guided', 'assist', 'full'];
@@ -108,6 +108,17 @@ describe('buildMessages', () => {
     assert.equal(out[0].role, 'system');
     assert.notEqual(out[0].content, 'old system');
     assert.equal(out[1].role, 'user');
+  });
+
+  it('caps history to the most recent MAX_HISTORY_MESSAGES messages', () => {
+    const history: ChatMessage[] = Array.from({ length: MAX_HISTORY_MESSAGES + 5 }, (_, i) => ({
+      role: i % 2 === 0 ? 'user' : 'assistant',
+      content: `msg-${i}`
+    }));
+    const out = buildMessages({ level: 'guided', history });
+    assert.equal(out.length, 1 + MAX_HISTORY_MESSAGES);
+    assert.equal(out[1].content, `msg-5`);
+    assert.equal(out[out.length - 1].content, `msg-${history.length - 1}`);
   });
 
   it('preserves user/assistant order', () => {

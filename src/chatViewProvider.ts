@@ -603,6 +603,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       font-weight: 400;
       color: var(--vl-accent-hover);
     }
+    .welcome-tagline {
+      margin: -4px 0 0;
+      font-size: 12px;
+      color: var(--vscode-descriptionForeground);
+      text-align: center;
+    }
     .typing {
       align-self: flex-start;
       color: var(--vscode-descriptionForeground);
@@ -721,6 +727,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         <path d="M5 11.18V16c3.5 2.5 9.5 2.5 13 0v-4.82"/>
       </svg>
       <h2>VibeLearn</h2>
+      <p class="welcome-tagline">Let's build something and learn along the way</p>
     </div>
   </div>
   <form id="form">
